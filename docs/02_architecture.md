@@ -5,15 +5,19 @@
 ```text
 用户提出研究问题
         ↓
-LLM 语义层
+LLM Semantic Extractor
         ↓
 Candidate Research Spec
         ↓
-固定 Validator
+Candidate Proposal
         ↓
-人工补充 / 审核
+Generic Review Engine
         ↓
-Frozen Research Spec
+Review Decision Log
+        ↓
+Frozen Execution Research Spec
+        ↓
+Data Binding
         ↓
 Rule Engine
         ↓
@@ -30,172 +34,188 @@ Algorithm Block
 Result Registry
 ```
 
-截至 V0.1，已经实现到 Frozen Research Spec，并完成 Algorithm I/O 与 Result Schema Contract。
+## 2. 为什么从 V0.1 升到 V0.2
 
-## 2. 当前模块
+V0.1 已完成：
 
-### src/medflow/llm
+- Candidate Research Spec
+- 固定 Validator
+- 人工确认
+- Freeze / Hash / Store
+- Algorithm I/O Contract
+- Result Contract
 
-负责自然语言语义提取。
+V0.2 进一步拆开三类本质不同的信息。
 
-主要文件：
+### Candidate Proposal
 
-- `client.py`：DeepSeek API Client
-- `spec_generator.py`：自然语言 → Candidate Research Spec
+给人看的讨论层。
 
-约束：
+可以保存：
 
-- 只提取明确表达的信息
-- 缺失字段保持 null
-- 不负责 open issues
-- 不负责是否允许冻结
-- 不负责统计计算
+- 当前值
+- 理由
+- 受控选项
+- 自定义输入入口
+- provenance
 
-### src/medflow/contracts
+### Review Decision Log
 
-负责平台中的结构化数据格式。
+保存人工审核过程：
 
-当前包括：
+- 谁审核
+- 原始值
+- 最终值
+- 决策动作
+- 时间
 
-- `candidate_spec.py`
-- `reviewed_spec.py`
-- `frozen_spec.py`
-- `algorithm_io.py`
-- `result.py`
+### Execution Research Spec
 
-### src/medflow/spec
+给机器执行。
 
-负责 Research Spec 的确定性业务逻辑。
+只允许明确、标准化、无歧义的语义值。
 
-当前包括：
+## 3. LLM 边界
 
-- `candidate_validator.py`
-- `candidate_updater.py`
-- `readiness.py`
-- `review_service.py`
-- `freeze_service.py`
-- `store.py`
+LLM 当前仍只负责：
 
-## 3. Research Spec 状态
+- 从用户研究问题提取明确表达的信息
+- 输出 Candidate Research Spec
 
-### NEEDS_INPUT
+LLM 不负责：
 
-存在 blocking open issues。
+- 自动选择统计方法
+- 自动确定缺失研究条件
+- 自动决定是否冻结
+- 生成正式执行 Spec
+- 直接统计计算
 
-### READY_FOR_REVIEW
+open issues 和执行层检查仍由固定代码完成。
 
-所有 blocking issues 已解决，可以交由科研人员人工审核。
+## 4. Proposal Builder
 
-### READY_FOR_DATA_BINDING
+`ProposalBuilderV02` 把 Candidate Spec 转成面向科研人员的审核项。
 
-科研人员已经明确确认。
-
-### FROZEN
-
-生成正式不可变研究方案版本。
-
-## 4. 为什么 open issues 不交给 LLM
-
-如果让 LLM 自己判断“还缺什么”，同一输入可能产生不同问题。
-
-当前做法：
+每个 Proposal Item 包含：
 
 ```text
-LLM
-只生成字段
-    ↓
-固定 Validator
-读取字段
-    ↓
-固定规则产生 open issues
+field_path
+title
+current_value
+reason
+options
+allow_custom
+blocking
+provenance
 ```
 
-因此同一个 Candidate Spec 可以得到稳定的校验结果。
+它替代了“每个字段手写一个确认函数”的扩展方式。
 
-## 5. Hash
+## 5. Generic Review Engine
 
-Frozen Research Spec 会生成 content_hash。
-
-相同研究内容应产生相同 hash。
-
-时间戳、人工确认时间等运行信息不应改变研究内容 hash。
-
-主要用途：
-
-- 内容完整性检查
-- 方案版本追踪
-- 后续结果溯源
-
-## 6. Algorithm Contract
-
-当前 V0.1 以 Logistic Regression 作为第一种算法样板。
-
-Algorithm Input 当前主要描述：
-
-- algorithm_name
-- algorithm_version
-- dataset_ref
-- outcome_column
-- exposure_column
-- covariate_columns
-
-Algorithm Output 当前主要描述：
-
-- status
-- n_used
-- term
-- effect measure
-- estimate
-- confidence interval
-- p value
-- warnings
-- error message
-
-当前只是 Contract，真实统计计算尚未接入。
-
-## 7. Result Contract
-
-Result Record 用于后续 Result Registry。
-
-需要能够关联：
+`ReviewEngineV02` 接收：
 
 ```text
-Result
-  ↓
-spec_id + spec_version
-  ↓
-algorithm_name + algorithm_version
+Proposal
++
+field_path -> selected_value
 ```
 
-确保结果知道自己来自：
-
-- 哪份研究方案
-- 哪个方案版本
-- 哪个算法
-- 哪个算法版本
-
-## 8. 下一阶段设计
-
-下一阶段：
+并输出：
 
 ```text
-Frozen Spec
-   ↓
+reviewed Candidate
++
+ReviewDecisionLogV02
+```
+
+以后增加字段时，主要扩展 Schema / Proposal metadata，而不是继续复制大量 CLI if/else。
+
+## 6. Execution Spec
+
+`ExecutionResearchSpecV02` 是后续 Rule / YAML / Workflow 使用的正式语义输入。
+
+当前包含：
+
+- study_design
+- objective
+- dataset
+- population
+- exposure
+- outcome
+- covariates
+- missing_data
+- analysis
+
+不包含：
+
+- AI 推荐理由
+- alternatives
+- open issues
+- UI 状态
+- 真实数据列名
+
+真实列名属于后续 Data Binding。
+
+## 7. Fail Closed
+
+执行层会拒绝明显模糊语义，例如：
+
+```text
+待确认
+需确认
+进一步确认
+取决于
+视情况
+若为横断面
+若为队列
+可选
+```
+
+这类内容可以存在于讨论阶段，但不能进入正式 Execution Spec。
+
+## 8. Artifact 分离
+
+V0.2 一次正式冻结保存：
+
+```text
+proposal.json
+review_log.json
+execution_spec.json
+```
+
+后续系统只读取 `execution_spec.json`。
+
+Proposal 和 Review Log 用于：
+
+- 人工回看
+- 决策审计
+- 解释为什么最终执行值是当前结果
+
+## 9. 下一阶段
+
+完成 V0.2 本地验收后进入：
+
+```text
+Frozen Execution Spec
+        ↓
+Data Binding Contract
+        ↓
 Rule Engine
-   ↓
+        ↓
 YAML Template
-   ↓
+        ↓
 DAG
 ```
 
-例如：
+第一条完整闭环仍以：
 
 ```text
-study_design = cross_sectional
-outcome.data_type = binary
-analysis.method = logistic_regression
+cross_sectional
++
+binary outcome
++
+logistic_regression
 ```
 
-固定规则应选择对应的 YAML Template。
-
-该过程不调用 LLM。
+作为最小实现。
