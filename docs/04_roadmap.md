@@ -15,9 +15,11 @@ Candidate Proposal
 ↓
 Review Decision Log
 ↓
-Frozen Execution Spec
+Frozen Research Plan
 ↓
 Data Binding
+↓
+Executable Analysis Spec
 ↓
 Rule / YAML
 ↓
@@ -57,18 +59,18 @@ v0.1.0-schema-contract
 - ProposalOptionV02
 - ReviewDecisionLogV02
 - Generic Review Engine
-- ExecutionResearchSpecV02
-- FrozenExecutionSpecV02
+- ResearchPlanV02
+- FrozenResearchPlanV02
 - 模糊语义拦截
 - 三文件 artifact bundle
 
 验收：
 
-- Proposal 与 Execution Spec 分离
+- Proposal 与 Research Plan 分离
 - 所有人工选择进入 Review Log
-- 相同 Execution Spec 产生相同 hash
+- 相同 Research Plan 产生相同 hash
 - Frozen 不可修改
-- “待确认/视情况/可选”等不能进入执行层
+- “待确认/视情况/可选”等不能进入正式 Research Plan
 
 ## Phase 2：Data Binding Contract
 
@@ -102,7 +104,7 @@ Data Binding 负责：
 
 原则：
 
-> 不修改 Frozen Execution Spec。
+> 不修改 Frozen Research Plan。Data Binding 完成后再生成真正的 Executable Analysis Spec。
 
 ## Phase 3：Rule + YAML Template
 
