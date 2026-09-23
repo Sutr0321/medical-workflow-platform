@@ -2,91 +2,69 @@
 
 最后更新：2026-09-23
 
-当前稳定标签：
+## 1. 稳定基线
 
 ```text
 v0.1.0-schema-contract
 ```
 
-## 1. 总体状态
+V0.1 已完成并保留，不直接重写历史版本。
 
-当前阶段：
+## 2. 当前开发
 
-> **Phase 1：Schema Contract V0.1 已完成。**
+当前分支：
 
-当前准备进入：
+```text
+feat/research-spec-v0.2
+```
 
-> **Phase 2：Rule Engine + YAML Template。**
+当前目标：
 
-## 2. 已完成
+> **Research Planning / Review Layer V0.2**
+
+## 3. 已完成
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| GitHub 私有仓库 | ✅ | 已建立版本管理 |
-| DeepSeek API 接入 | ✅ | 已完成连通测试 |
-| 自然语言 → Candidate Research Spec | ✅ | 已运行 |
-| Research Spec Pydantic Schema | ✅ | V0.1 |
-| Candidate Validator | ✅ | 固定规则 |
-| open issues | ✅ | 由程序生成 |
-| Candidate 更新 | ✅ | 支持人工补充 |
-| Readiness | ✅ | NEEDS_INPUT / READY_FOR_REVIEW |
-| 人工确认 | ✅ | 未确认不能冻结 |
-| Frozen Research Spec | ✅ | 已运行 |
-| spec_id | ✅ | 已生成 |
-| spec_version | ✅ | V1 |
-| content_hash | ✅ | 已验证稳定性 |
-| Frozen 对象防修改 | ✅ | 已测试 |
-| Frozen V1 防覆盖 | ✅ | 已测试 |
-| Frozen JSON 保存 | ✅ | artifacts/specs |
-| analysis.method | ✅ | 当前支持 logistic_regression |
-| Algorithm Input Schema | ✅ | 已测试 |
-| Algorithm Output Schema | ✅ | 已测试 |
+| DeepSeek API | ✅ | 已接入 |
+| Candidate Research Spec V0.1 | ✅ | 稳定基线 |
+| 固定 Validator / open issues | ✅ | 不依赖 LLM |
+| Candidate Updater | ✅ | 支持结构化人工补充 |
+| Freeze / Hash / Store V0.1 | ✅ | 已测试 |
+| Algorithm I/O Schema | ✅ | 已测试 |
 | Result Schema | ✅ | 已测试 |
-| Research Spec 命令行 Demo | ✅ | 已可交互运行 |
+| Candidate Proposal V0.2 | ✅ | 新增人类审核层 |
+| Proposal Option / Item | ✅ | 机器值与人类标签分离 |
+| Generic Review Engine V0.2 | ✅ | 不按字段复制确认函数 |
+| Review Decision Log V0.2 | ✅ | 独立审计记录 |
+| Execution Research Spec V0.2 | ✅ | 执行语义与建议层分离 |
+| 模糊语义 Fail Closed | ✅ | 执行层阻止待确认/视情况等 |
+| Execution Hash / Freeze V0.2 | ✅ | 已实现 |
+| Planning Bundle Store | ✅ | 三份 artifact 分离保存 |
+| V0.2 自动验收脚本 | ✅ | 已写入分支 |
+| V0.2 交互 Demo | ✅ | 已写入分支 |
 
-## 3. 当前 V0.1 验收结果
+## 4. 待本地验收
 
-已验证：
+需要在本地执行：
 
-```text
-不完整 Research Spec
-→ 禁止确认
+```bat
+python examples\test_research_spec_v02.py
 ```
 
-已验证：
+通过后再执行：
 
-```text
-人工确认
-→ 才允许冻结
+```bat
+python examples\run_research_spec_v02_demo.py
 ```
 
-已验证：
+当前 GitHub 分支已写入代码，但在合并 main 前应完成本地测试。
 
-```text
-相同研究内容
-→ 相同 content_hash
-```
-
-已验证：
-
-```text
-Frozen Spec
-→ 禁止直接修改
-```
-
-已验证：
-
-```text
-已有 V1 JSON
-→ 禁止覆盖
-```
-
-已验证 Algorithm / Result Contract 的基础字段类型约束。
-
-## 4. 尚未完成
+## 5. 尚未完成
 
 | 模块 | 状态 |
 |---|---|
+| Data Binding Contract | ⬜ |
 | Rule Engine | ⬜ |
 | YAML Template | ⬜ |
 | YAML → DAG | ⬜ |
@@ -96,45 +74,37 @@ Frozen Spec
 | Workflow Engine | ⬜ |
 | Result Registry | ⬜ |
 | 真实 Logistic Regression Block | ⬜ |
-| 数据绑定层 | ⬜ |
 | Golden Test | ⬜ |
 | Web 前端 | ⬜ |
 
-## 5. 当前限制
+## 6. 当前判断
 
-当前版本只将 Logistic Regression 作为第一个标准算法样板。
-
-这不是最终算法范围。
-
-当前尚不能：
-
-- 自动执行真实 Logistic Regression
-- 自动构建 DAG
-- 自动运行完整 Workflow
-- 输出真实科研统计结果
-- 替代 R / Python 人工统计分析
-- 进行 Web 页面操作
-
-## 6. 下一项任务
-
-下一项任务：
-
-> **Rule Engine V0.1 + 第一个 YAML Template**
-
-第一版只需要支持一种明确组合：
+项目目前已经不再只是：
 
 ```text
-cross_sectional
-+
-binary outcome
-+
-logistic_regression
+输入一句话
+→ 打印 JSON
+→ 保存 JSON
 ```
 
-并稳定选择：
+V0.2 开始形成：
 
 ```text
-cross_sectional_binary_logistic_v1.yaml
+语义提取
+→ 候选方案
+→ 人工审核
+→ 审计日志
+→ 明确执行方案
 ```
 
-不支持的组合必须 Fail Closed。
+但真正跨出 Demo/MVP 的关键节点仍然是：
+
+```text
+真实数据绑定
+→ 自动 Workflow
+→ 真实 Logistic
+→ Result Registry
+→ 与人工结果一致
+```
+
+因此 V0.2 完成后不继续堆 CLI 功能，而应尽快进入执行链。
