@@ -25,6 +25,7 @@ sys.path.insert(
 
 
 from medflow.contracts.candidate_spec import (
+    CandidateAnalysis,
     CandidateCovariate,
     CandidateDataset,
     CandidateExposure,
@@ -32,7 +33,6 @@ from medflow.contracts.candidate_spec import (
     CandidateOutcome,
     CandidatePopulation,
     CandidateResearchSpecV01,
-    CandidateAnalysis,
 )
 from medflow.planning.proposal_builder import (
     ProposalBuilderV02,
@@ -40,11 +40,11 @@ from medflow.planning.proposal_builder import (
 from medflow.planning.review_engine import (
     ReviewEngineV02,
 )
-from medflow.planning.execution_builder import (
-    ExecutionSpecBuilderV02,
+from medflow.planning.research_plan_builder import (
+    ResearchPlanBuilderV02,
 )
 from medflow.planning.freeze_service_v02 import (
-    ExecutionSpecFreezeServiceV02,
+    ResearchPlanFreezeServiceV02,
 )
 from medflow.planning.store_v02 import (
     ResearchPlanningStoreV02,
@@ -84,15 +84,9 @@ def build_candidate():
             ),
         ),
         covariates=[
-            CandidateCovariate(
-                name="年龄"
-            ),
-            CandidateCovariate(
-                name="性别"
-            ),
-            CandidateCovariate(
-                name="BMI"
-            ),
+            CandidateCovariate(name="年龄"),
+            CandidateCovariate(name="性别"),
+            CandidateCovariate(name="BMI"),
         ],
         missing_data=CandidateMissingData(
             strategy="complete_case_global"
@@ -104,9 +98,7 @@ def build_candidate():
 
     candidate.open_issues = (
         CandidateSpecValidator
-        .validate(
-            candidate
-        )
+        .validate(candidate)
     )
 
     return candidate
@@ -120,23 +112,18 @@ print("========================================")
 
 candidate = build_candidate()
 
-
 print()
 print("1. 构建 Candidate Proposal")
 
 proposal = (
     ProposalBuilderV02
-    .build(
-        candidate
-    )
+    .build(candidate)
 )
 
 assert proposal.schema_version == "0.2.0"
 assert len(proposal.items) > 0
 
-print(
-    "PASS：Candidate Proposal 已生成"
-)
+print("PASS：Candidate Proposal 已生成")
 
 
 print()
@@ -160,50 +147,50 @@ reviewed_candidate, review_log = (
 assert review_log.status == "COMPLETE"
 assert review_log.reviewed_by == "test_reviewer"
 
-print(
-    "PASS：人工决策已独立记录"
-)
+print("PASS：人工决策已独立记录")
 
 
 print()
-print("3. 构建 Execution Research Spec")
+print("3. 构建正式 Research Plan")
 
-execution_spec = (
-    ExecutionSpecBuilderV02
+research_plan = (
+    ResearchPlanBuilderV02
     .build(
         reviewed_candidate=reviewed_candidate,
         review_log=review_log,
     )
 )
 
-assert execution_spec.study_design == "cross_sectional"
-assert execution_spec.analysis.method == "logistic_regression"
-assert execution_spec.dataset.name == "NHANES"
+assert research_plan.study_design == "cross_sectional"
+assert research_plan.analysis.method == "logistic_regression"
+assert research_plan.dataset.name == "NHANES"
+assert research_plan.exposure.preferred_unit == "ng/mL"
 
-execution_json = (
-    execution_spec
+plan_json = (
+    research_plan
     .model_dump(
         mode="json"
     )
 )
 
-assert "open_issues" not in execution_json
-assert "review_status" not in execution_json
-assert "column" not in execution_json["exposure"]
-assert "column" not in execution_json["outcome"]
+assert "open_issues" not in plan_json
+assert "review_status" not in plan_json
+assert "column" not in plan_json["exposure"]
+assert "column" not in plan_json["outcome"]
 
 print(
-    "PASS：Execution Spec 与 Proposal/数据列绑定已分离"
+    "PASS：正式 Research Plan 与 Proposal / "
+    "真实数据列绑定已分离"
 )
 
 
 print()
-print("4. 冻结 Execution Spec")
+print("4. 冻结 Research Plan")
 
 frozen = (
-    ExecutionSpecFreezeServiceV02
+    ResearchPlanFreezeServiceV02
     .freeze(
-        execution_spec=execution_spec,
+        research_plan=research_plan,
         review_log=review_log,
     )
 )
@@ -211,18 +198,16 @@ frozen = (
 assert frozen.status == "FROZEN"
 assert frozen.review_id == review_log.review_id
 
-print(
-    "PASS：Execution Spec 已冻结"
-)
+print("PASS：Research Plan 已冻结")
 
 
 print()
 print("5. Hash 稳定性")
 
 frozen_2 = (
-    ExecutionSpecFreezeServiceV02
+    ResearchPlanFreezeServiceV02
     .freeze(
-        execution_spec=execution_spec,
+        research_plan=research_plan,
         review_log=review_log,
     )
 )
@@ -233,7 +218,7 @@ assert (
 )
 
 print(
-    "PASS：相同 Execution Spec 产生相同 content_hash"
+    "PASS：相同 Research Plan 产生相同 content_hash"
 )
 
 
@@ -242,21 +227,21 @@ print("6. Frozen 不可直接修改")
 
 try:
 
-    frozen.spec_version = 2
+    frozen.plan_version = 2
 
     raise AssertionError(
-        "FrozenExecutionSpecV02 可以被直接修改"
+        "FrozenResearchPlanV02 可以被直接修改"
     )
 
 except ValidationError:
 
     print(
-        "PASS：Frozen Execution Spec 已阻止直接修改"
+        "PASS：Frozen Research Plan 已阻止直接修改"
     )
 
 
 print()
-print("7. 模糊语义禁止进入执行层")
+print("7. 模糊语义禁止进入正式 Research Plan")
 
 fuzzy_candidate = build_candidate()
 
@@ -305,13 +290,13 @@ fuzzy_reviewed, fuzzy_log = (
 
 try:
 
-    ExecutionSpecBuilderV02.build(
+    ResearchPlanBuilderV02.build(
         reviewed_candidate=fuzzy_reviewed,
         review_log=fuzzy_log,
     )
 
     raise AssertionError(
-        "模糊语义竟然进入了 Execution Spec"
+        "模糊语义竟然进入了 Research Plan"
     )
 
 except ValueError as exc:
@@ -338,7 +323,7 @@ with tempfile.TemporaryDirectory() as tmp:
         store.save_bundle(
             proposal=proposal,
             review_log=review_log,
-            frozen_spec=frozen,
+            frozen_plan=frozen,
         )
     )
 
@@ -354,11 +339,11 @@ with tempfile.TemporaryDirectory() as tmp:
 
     assert (
         saved_dir
-        / "execution_spec.json"
+        / "research_plan.json"
     ).exists()
 
     print(
-        "PASS：Proposal / Review Log / Execution Spec "
+        "PASS：Proposal / Review Log / Research Plan "
         "已分开保存"
     )
 
