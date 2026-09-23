@@ -1,59 +1,112 @@
 # 04 开发路线图
 
-## 目标
+## 总目标
 
-先完成一个真正可运行、可验证的小闭环，再扩展更多算法和数据库。
-
-最终 Demo：
+先完成一条可验证的真实闭环：
 
 ```text
 研究问题
 ↓
-Research Spec
+Candidate Research Spec
 ↓
-人工确认冻结
+Candidate Proposal
 ↓
-Rule Engine
+人工审核
 ↓
-YAML
+Review Decision Log
+↓
+Frozen Execution Spec
+↓
+Data Binding
+↓
+Rule / YAML
 ↓
 DAG
 ↓
 Workflow
 ↓
-真实算法
+真实 Logistic Regression
 ↓
 Result Registry
 ↓
-与人工结果一致
+Golden Test
 ```
 
-## Phase 1：Schema Contract
+## Phase 1：Schema Contract V0.1
 
-状态：✅ 已完成 V0.1
+状态：✅ 已完成
 
-内容：
-
-- Research Spec Schema
-- Algorithm Input Schema
-- Algorithm Output Schema
-- Result Schema
-- Pydantic 校验
-- Research Spec 冻结
-
-版本标签：
+标签：
 
 ```text
 v0.1.0-schema-contract
 ```
 
-## Phase 2：Rule + YAML Template
+## Phase 1.5：Research Planning / Review V0.2
 
-状态：⏳ 下一阶段
+状态：⏳ 已开发，等待本地验收
 
 目标：
 
-输入 Frozen Research Spec 后，由固定规则选择 YAML Template。
+把“给人讨论的候选建议”和“给机器执行的正式 Spec”分离。
+
+新增：
+
+- CandidateProposalV02
+- ProposalItemV02
+- ProposalOptionV02
+- ReviewDecisionLogV02
+- Generic Review Engine
+- ExecutionResearchSpecV02
+- FrozenExecutionSpecV02
+- 模糊语义拦截
+- 三文件 artifact bundle
+
+验收：
+
+- Proposal 与 Execution Spec 分离
+- 所有人工选择进入 Review Log
+- 相同 Execution Spec 产生相同 hash
+- Frozen 不可修改
+- “待确认/视情况/可选”等不能进入执行层
+
+## Phase 2：Data Binding Contract
+
+状态：⬜
+
+目标：
+
+把正式研究语义映射到真实数据。
+
+例如：
+
+```text
+血清25-羟基维生素D
+→ LBXVIDMS
+
+高血压
+→ 派生变量 hypertension
+```
+
+Data Binding 负责：
+
+- dataset version
+- source file
+- source variable
+- derived variable
+- unit
+- coding
+- reference group
+- transformation
+- derivation rule
+
+原则：
+
+> 不修改 Frozen Execution Spec。
+
+## Phase 3：Rule + YAML Template
+
+状态：⬜
 
 第一版只支持：
 
@@ -63,101 +116,59 @@ binary outcome
 logistic_regression
 ```
 
-计划文件：
-
-```text
-src/medflow/rules/
-config/templates/
-```
-
 验收：
 
-- 相同 Spec 选择相同 Template
+- 相同 Execution Spec 选择相同模板
 - 不调用 LLM
 - 不支持组合 Fail Closed
 
-## Phase 3：YAML → DAG
+## Phase 4：YAML → DAG
 
 状态：⬜
 
-目标：
-
-将 YAML Workflow 转换为 DAG。
-
 需要：
 
-- Node Schema
-- Edge Schema
+- Node / Edge Schema
 - DAG Parser
 - DAG Validator
 - 环检测
 - 拓扑排序
 
-验收：
-
-- 合法 DAG 正确生成
-- 循环依赖被阻止
-- 缺失节点被阻止
-
-## Phase 4：Algorithm Registry + Mock Block
+## Phase 5：Algorithm Registry + Mock Block
 
 状态：⬜
 
 目标：
 
-建立算法注册机制。
+Workflow 只能通过 Registry 找算法。
 
-第一版：
+第一版注册：
 
 ```text
 logistic_regression
 ```
 
-先接 Mock Block，不进行真实统计。
-
-验收：
-
-- Workflow 只通过 Registry 找算法
-- 算法不存在则 Fail Closed
-- 算法版本可记录
-
-## Phase 5：Workflow Engine
+## Phase 6：Workflow Engine
 
 状态：⬜
 
-目标：
-
-按照 DAG 顺序执行节点。
-
-第一版只做：
+第一版：
 
 - 单机
 - 串行
 - 明确状态
 - 错误即停止
 
-状态建议：
-
-```text
-PENDING
-RUNNING
-SUCCESS
-FAILED
-```
-
-## Phase 6：Result Registry
+## Phase 7：Result Registry
 
 状态：⬜
 
-目标：
+结果至少关联：
 
-把 Algorithm Output 保存成标准 Result Record。
-
-需要记录：
-
-- result_id
 - spec_id
 - spec_version
+- data_binding_id
+- workflow/template version
 - algorithm_name
 - algorithm_version
 - n_used
@@ -166,49 +177,40 @@ FAILED
 - P
 - timestamp
 
-## Phase 7：真实 Logistic Regression Block
+## Phase 8：真实 Logistic Regression Block
 
 状态：⬜
 
-目标：
-
-用真实数据执行第一种统计模型。
-
-第一版只解决：
+用真实测试数据执行：
 
 ```text
-连续/分类暴露
+暴露
 +
 二分类结局
 +
-协变量调整
+协变量
+→ OR / 95%CI / P
 ```
 
-真实统计实现应与人工标准代码进行对比。
-
-## Phase 8：Golden Test
+## Phase 9：Golden Test
 
 状态：⬜
 
-目标：
-
-证明自动工作流与人工标准统计分析一致。
-
-需要固定：
+固定：
 
 - 测试数据
-- Research Spec
+- Execution Spec
+- Data Binding
+- 人工标准代码
 - 人工标准结果
 - 自动结果
-- 容差规则
+- 数值容差
 
-达到一致后，才将算法 Block 标记为验证通过。
+只有通过 Golden Test 的算法版本才允许标记为 validated。
 
-## Phase 9：扩展算法
+## Phase 10：算法扩展
 
-状态：⬜
-
-在第一个闭环稳定后再增加：
+在闭环稳定后再增加：
 
 - Linear Regression
 - Cox Regression
@@ -218,21 +220,15 @@ FAILED
 - Mediation
 - Clustering
 
-原则：
+## Phase 11：Web UI
 
-> 新增算法尽量通过注册扩展，而不是修改 Workflow Engine 核心代码。
-
-## Phase 10：Web Demo
-
-状态：⬜
-
-在后端闭环稳定后，再实现：
+最后再做：
 
 - 研究问题输入
-- Research Spec 表单
-- open issues 交互
-- 人工确认
-- Workflow 状态展示
+- Proposal 审核
+- Review Log 查看
+- Execution Spec 查看
+- Workflow 状态
 - Result 展示
 
-不在当前阶段提前开发复杂前端。
+不在后端闭环稳定前投入复杂前端。
