@@ -34,18 +34,8 @@ class ResearchExposurePlanV02(BaseModel):
     真实源变量单位必须在 Data Binding 阶段验证。
     """
     name: str
-
-    data_type: Literal[
-        "continuous",
-        "categorical",
-        "binary",
-    ]
-
-    analysis_form: Literal[
-        "continuous",
-        "categorical",
-    ]
-
+    data_type: str
+    analysis_form: str
     preferred_unit: str | None = None
 
 
@@ -60,35 +50,41 @@ class ResearchOutcomePlanV02(BaseModel):
     留到 Data Binding。
     """
     name: str
-
-    data_type: Literal[
-        "binary",
-    ]
-
+    data_type: str
     definition: str
 
 
 class ResearchMissingDataPlanV02(BaseModel):
-    strategy: Literal[
-        "complete_case_global",
-    ]
+    """
+    保存科研人员实际确认的缺失值处理方案。
+
+    是否被当前平台执行层支持，由后续 Capability Check 判断。
+    """
+    strategy: str
 
 
 class ResearchAnalysisPlanV02(BaseModel):
-    method: Literal[
-        "logistic_regression",
-    ]
+    """
+    保存科研人员实际确认的主分析方法。
+
+    Research Plan 不应为了迁就当前平台实现能力
+    强制改成某一种统计方法。
+    """
+    method: str
 
 
 class ResearchPlanV02(BaseModel):
     """
     人工审核完成后的正式研究计划。
 
-    它已经冻结研究意图，
-    但还不是“可直接执行”的统计任务。
+    它冻结的是研究意图，不是当前平台的执行能力。
 
-    后续需要经过 Data Binding，
-    才能生成真正的 Executable Analysis Spec。
+    后续需要经过：
+    1. Data Binding
+    2. Capability Check
+    3. Executable Analysis Spec
+
+    才能进入真正的 Workflow。
     """
 
     schema_version: Literal[
@@ -97,13 +93,9 @@ class ResearchPlanV02(BaseModel):
 
     source_question: str
 
-    study_design: Literal[
-        "cross_sectional",
-    ]
+    study_design: str
 
-    objective: Literal[
-        "association",
-    ]
+    objective: str
 
     dataset: ResearchDatasetPlanV02
 
@@ -131,7 +123,7 @@ class FrozenResearchPlanV02(BaseModel):
     - 不允许直接修改
     - 修改研究计划必须创建新版本
 
-    但它仍需经过 Data Binding 才能执行。
+    但它仍需经过 Data Binding 和 Capability Check 才能执行。
     """
 
     model_config = ConfigDict(
