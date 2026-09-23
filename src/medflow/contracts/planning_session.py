@@ -46,6 +46,24 @@ class PlanningStateUpdateV03(BaseModel):
     evidence: str
 
 
+class PlanningDecisionV03(BaseModel):
+    """
+    已经由用户明确表达或明确接受的决策记录。
+    """
+
+    field_path: str
+
+    value: Any
+
+    evidence: str
+
+    source: Literal[
+        "USER_EXPLICIT"
+    ] = "USER_EXPLICIT"
+
+    decided_at: datetime
+
+
 class PlanningAgentTurnV03(BaseModel):
     """
     LLM 每轮的内部结构化输出。
@@ -91,6 +109,12 @@ class PlanningSessionV03(BaseModel):
     current_candidate: CandidateResearchSpecV01
 
     confirmed_fields: list[str] = Field(
+        default_factory=list
+    )
+
+    decisions: list[
+        PlanningDecisionV03
+    ] = Field(
         default_factory=list
     )
 
