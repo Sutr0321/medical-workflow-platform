@@ -43,7 +43,7 @@ class ProposalBuilderV02:
 
             provenance = (
                 "USER_EXPLICIT"
-                if current_value is not None
+                if current_value not in (None, [])
                 else "SYSTEM_REQUIRED"
             )
 
@@ -75,6 +75,22 @@ class ProposalBuilderV02:
                     description=(
                         "暴露与结局在同一研究时点或同一调查周期评估。"
                     ),
+                )
+            ],
+        )
+
+        add(
+            field_path="objective",
+            title="研究目的",
+            current_value=spec.objective,
+            reason=(
+                "执行层需要明确主研究目的，"
+                "V0.2 第一个闭环当前只支持关联性研究。"
+            ),
+            options=[
+                ProposalOptionV02(
+                    value="association",
+                    label="关联性研究",
                 )
             ],
         )
