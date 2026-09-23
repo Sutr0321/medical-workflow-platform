@@ -5,11 +5,10 @@ from medflow.contracts.candidate_spec import (
 
 class ConversationalReadinessV03:
     """
-    V0.3 对话规划阶段的确定性完整性检查。
+    对话规划阶段的确定性完整性检查。
 
-    这里不调用 LLM。
-    它只回答：
-    “当前 Research Plan 还缺哪些正式冻结所需字段？”
+    只回答“研究计划还缺什么”，
+    不判断当前平台能不能执行。
     """
 
     REQUIRED_PATHS = (
@@ -60,6 +59,32 @@ class ConversationalReadinessV03:
                 missing.append(path)
 
         return missing
+
+    @staticmethod
+    def discussion_targets(
+        spec: CandidateResearchSpecV01,
+        confirmed_fields: list[str],
+    ) -> list[str]:
+        """
+        返回下一轮允许 AI 主动追问的字段。
+
+        核心规则：
+        已确认字段不再主动询问。
+        用户如果主动提出修改，仍然允许更新。
+        """
+
+        confirmed = set(
+            confirmed_fields
+        )
+
+        return [
+            path
+            for path in (
+                ConversationalReadinessV03
+                .missing_fields(spec)
+            )
+            if path not in confirmed
+        ]
 
     @staticmethod
     def is_ready(
