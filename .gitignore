@@ -7,3 +7,6 @@ __pycache__/
 
 # V0.2 Research Planning runtime artifacts
 artifacts/planning_v02/
+
+# V0.3 Conversational Planning runtime artifacts
+artifacts/conversations_v03/
