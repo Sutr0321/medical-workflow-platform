@@ -9,9 +9,6 @@ from medflow.conversation.readiness_v03 import (
 class ResearchPlanPreviewV03:
     """
     人类可读的研究方案预览。
-
-    后续 Web 前端可以直接把同一份结构化状态
-    渲染成右侧“实时方案预览”面板。
     """
 
     LABELS = {
@@ -40,66 +37,26 @@ class ResearchPlanPreviewV03:
         data = spec.model_dump()
 
         rows = [
-            (
-                "study_design",
-                data["study_design"],
-            ),
-            (
-                "objective",
-                data["objective"],
-            ),
-            (
-                "dataset.name",
-                data["dataset"]["name"],
-            ),
-            (
-                "population.age_min",
-                data["population"]["age_min"],
-            ),
-            (
-                "exposure.name",
-                data["exposure"]["name"],
-            ),
-            (
-                "exposure.data_type",
-                data["exposure"]["data_type"],
-            ),
-            (
-                "exposure.analysis_form",
-                data["exposure"]["analysis_form"],
-            ),
-            (
-                "exposure.unit",
-                data["exposure"]["unit"],
-            ),
-            (
-                "outcome.name",
-                data["outcome"]["name"],
-            ),
-            (
-                "outcome.data_type",
-                data["outcome"]["data_type"],
-            ),
-            (
-                "outcome.definition",
-                data["outcome"]["definition"],
-            ),
+            ("study_design", data["study_design"]),
+            ("objective", data["objective"]),
+            ("dataset.name", data["dataset"]["name"]),
+            ("population.age_min", data["population"]["age_min"]),
+            ("exposure.name", data["exposure"]["name"]),
+            ("exposure.data_type", data["exposure"]["data_type"]),
+            ("exposure.analysis_form", data["exposure"]["analysis_form"]),
+            ("exposure.unit", data["exposure"]["unit"]),
+            ("outcome.name", data["outcome"]["name"]),
+            ("outcome.data_type", data["outcome"]["data_type"]),
+            ("outcome.definition", data["outcome"]["definition"]),
             (
                 "covariates",
                 [
                     item["name"]
-                    for item
-                    in data["covariates"]
+                    for item in data["covariates"]
                 ],
             ),
-            (
-                "missing_data.strategy",
-                data["missing_data"]["strategy"],
-            ),
-            (
-                "analysis.method",
-                data["analysis"]["method"],
-            ),
+            ("missing_data.strategy", data["missing_data"]["strategy"]),
+            ("analysis.method", data["analysis"]["method"]),
         ]
 
         missing = set(
@@ -128,6 +85,10 @@ class ResearchPlanPreviewV03:
                 marker = "⚠"
                 shown = "待讨论"
 
+            elif path == "covariates" and not value:
+                marker = "—"
+                shown = "未设置"
+
             elif path in confirmed:
                 marker = "✅"
                 shown = (
@@ -155,6 +116,26 @@ class ResearchPlanPreviewV03:
                 f"{marker} {label}：{shown}"
             )
 
+        blockers = (
+            ConversationalReadinessV03
+            .blocking_reasons(spec)
+        )
+
+        lines.append("")
+        lines.append(
+            "冻结检查："
+            + (
+                "可冻结"
+                if not blockers
+                else "不可冻结"
+            )
+        )
+
+        for reason in blockers:
+            lines.append(
+                f"⚠ {reason}"
+            )
+
         return "\n".join(lines)
 
     @staticmethod
@@ -171,5 +152,11 @@ class ResearchPlanPreviewV03:
                 if value
                 else "无"
             )
+
+        if isinstance(value, float):
+            if value.is_integer():
+                return str(
+                    int(value)
+                )
 
         return str(value)
