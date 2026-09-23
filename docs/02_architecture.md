@@ -3,17 +3,21 @@
 ## 1. 总体架构
 
 ```text
-用户提出研究问题
+用户给出课题主题
         ↓
-LLM Semantic Extractor
+Conversational Planning Agent
         ↓
-Candidate Research Spec
+Planning Session
         ↓
-Candidate Proposal
+Structured Research State
         ↓
-Generic Review Engine
+Deterministic Validator / Readiness
         ↓
-Review Decision Log
+多轮继续对话
+        ↓
+Research Plan Preview
+        ↓
+用户最终确认
         ↓
 Frozen Research Plan
         ↓
@@ -23,201 +27,169 @@ Executable Analysis Spec
         ↓
 Rule Engine
         ↓
-YAML Template
-        ↓
-DAG
+YAML / DAG
         ↓
 Workflow Engine
         ↓
-Algorithm Registry
-        ↓
-Algorithm Block
+Algorithm Registry / Block
         ↓
 Result Registry
 ```
 
-## 2. 为什么从 V0.1 升到 V0.2
+## 2. 用户看到什么
 
-V0.1 已完成：
+用户主要看到自然语言对话，而不是 JSON 或 field_path。
 
-- Candidate Research Spec
-- 固定 Validator
-- 人工确认
-- Freeze / Hash / Store
-- Algorithm I/O Contract
-- Result Contract
-
-V0.2 进一步拆开三类本质不同的信息。
-
-### Candidate Proposal
-
-给人看的讨论层。
-
-可以保存：
-
-- 当前值
-- 理由
-- 受控选项
-- 自定义输入入口
-- provenance
-
-### Review Decision Log
-
-保存人工审核过程：
-
-- 谁审核
-- 原始值
-- 最终值
-- 决策动作
-- 时间
-
-### Research Plan
-
-冻结正式研究计划，但还不能直接执行。
-
-只允许明确、标准化、无歧义的语义值。
-
-## 3. LLM 边界
-
-LLM 当前仍只负责：
-
-- 从用户研究问题提取明确表达的信息
-- 输出 Candidate Research Spec
-
-LLM 不负责：
-
-- 自动选择统计方法
-- 自动确定缺失研究条件
-- 自动决定是否冻结
-- 生成正式执行 Spec
-- 直接统计计算
-
-open issues 和执行层检查仍由固定代码完成。
-
-## 4. Proposal Builder
-
-`ProposalBuilderV02` 把 Candidate Spec 转成面向科研人员的审核项。
-
-每个 Proposal Item 包含：
+例如：
 
 ```text
-field_path
-title
-current_value
-reason
-options
-allow_custom
-blocking
-provenance
+用户：
+我想研究维生素D与高血压的关系。
+
+AI：
+可以。这个课题还需要先确定数据来源和研究设计。
+你准备使用什么数据库？
 ```
 
-它替代了“每个字段手写一个确认函数”的扩展方式。
+用户还可以随时查看“研究方案实时预览”。
 
-## 5. Generic Review Engine
+## 3. 后台维护什么
 
-`ReviewEngineV02` 接收：
+每个 `PlanningSessionV03` 保存：
+
+- session_id
+- messages
+- current_candidate
+- confirmed_fields
+- decisions
+- pending_suggestions
+- status
+- created_at / updated_at
+
+状态：
 
 ```text
-Proposal
-+
-field_path -> selected_value
+DISCUSSING
+READY_TO_FREEZE
+FROZEN
 ```
 
-并输出：
+## 4. AI 输出不是直接改数据库
+
+每一轮 Planning Agent 内部返回：
 
 ```text
-reviewed Candidate
-+
-ReviewDecisionLogV02
+assistant_message
+explicit_updates
+suggestions
 ```
 
-以后增加字段时，主要扩展 Schema / Proposal metadata，而不是继续复制大量 CLI if/else。
+### explicit_updates
 
-## 6. Execution Spec
+只有用户当前消息已经明确表达的内容才能进入。
 
-`ResearchPlanV02` 是经人工审核后冻结的正式研究计划。它不包含真实数据列、实际单位、编码或派生表达式，因此不能直接交给算法执行。
-
-当前包含：
-
-- study_design
-- objective
-- dataset
-- population
-- exposure
-- outcome
-- covariates
-- missing_data
-- analysis
-
-不包含：
-
-- AI 推荐理由
-- alternatives
-- open issues
-- UI 状态
-- 真实数据列名
-
-真实列名属于后续 Data Binding。
-
-## 7. Fail Closed
-
-执行层会拒绝明显模糊语义，例如：
+例如用户说：
 
 ```text
-待确认
-需确认
-进一步确认
-取决于
-视情况
-若为横断面
-若为队列
-可选
+用 NHANES 2017-2018，纳入20岁以上成年人。
 ```
 
-这类内容可以存在于讨论阶段，但不能进入正式 Execution Spec。
+可以产生明确状态更新。
 
-## 8. Artifact 分离
+### suggestions
 
-V0.2 一次正式冻结保存：
+AI 自己提出的候选方案只能进入 pending suggestions。
+
+例如：
 
 ```text
-proposal.json
+如果最终是横断面 + 二分类结局，
+Logistic 回归可以作为一个候选主分析方法。
+```
+
+在用户明确接受前，不能写入正式状态。
+
+## 5. 确定性层仍然存在
+
+V0.3 并没有把可靠性重新交给 LLM。
+
+固定程序仍负责：
+
+- Schema 校验
+- 允许更新的 field_path
+- Pydantic 类型约束
+- readiness
+- freeze 前完整性检查
+- 模糊语义 Fail Closed
+- content hash
+- immutable Frozen Research Plan
+
+因此：
+
+> 对用户是聊天，对系统是结构化状态机。
+
+## 6. Preview
+
+`ResearchPlanPreviewV03` 从同一结构化状态生成可读预览。
+
+CLI 当前使用文本渲染。
+
+未来 Web UI 可以直接做成：
+
+```text
+左侧：AI 对话
+右侧：Research Plan 实时预览
+底部：确认并冻结研究方案
+```
+
+## 7. Freeze
+
+Freeze 不调用 LLM。
+
+只有状态达到：
+
+```text
+READY_TO_FREEZE
+```
+
+并且用户执行最终确认后，才生成：
+
+```text
+FrozenResearchPlanV02
+```
+
+冻结后当前版本不允许直接修改。
+
+## 8. Data Binding 边界
+
+Research Plan 只冻结研究意图。
+
+真实数据细节继续留给下一阶段：
+
+- dataset version / source file
+- source variable
+- actual source unit
+- coding
+- reference group
+- transformation
+- derived variable
+- derivation rule
+
+完成 Data Binding 后才生成真正的：
+
+```text
+Executable Analysis Spec
+```
+
+## 9. Artifact
+
+V0.3 冻结后保存：
+
+```text
+planning_session.json
+transcript.json
 review_log.json
-execution_spec.json
+research_plan.json
 ```
 
-后续系统先读取 `research_plan.json`，再通过 Data Binding 绑定真实变量、单位、编码与派生规则，之后才生成 Executable Analysis Spec。
-
-Proposal 和 Review Log 用于：
-
-- 人工回看
-- 决策审计
-- 解释为什么最终执行值是当前结果
-
-## 9. 下一阶段
-
-完成 V0.2 本地验收后进入：
-
-```text
-Frozen Execution Spec
-        ↓
-Data Binding Contract
-        ↓
-Rule Engine
-        ↓
-YAML Template
-        ↓
-DAG
-```
-
-第一条完整闭环仍以：
-
-```text
-cross_sectional
-+
-binary outcome
-+
-logistic_regression
-```
-
-作为最小实现。
+这样既保留最终方案，也保留方案是如何通过对话形成的。
