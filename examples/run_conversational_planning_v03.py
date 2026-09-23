@@ -20,6 +20,9 @@ sys.path.insert(
 )
 
 
+from medflow.conversation.commands import (
+    PlanningCommandRouterV03,
+)
 from medflow.conversation.finalizer import (
     ConversationalPlanningFinalizerV03,
 )
@@ -149,11 +152,12 @@ while True:
     if not user_message:
         continue
 
-    if user_message in {
-        "退出",
-        "/quit",
-        "/exit",
-    }:
+    command = (
+        PlanningCommandRouterV03
+        .route(user_message)
+    )
+
+    if command == "QUIT":
 
         print()
         print(
@@ -162,11 +166,7 @@ while True:
 
         break
 
-    if user_message in {
-        "预览方案",
-        "看看方案",
-        "/preview",
-    }:
+    if command == "PREVIEW":
 
         show_preview(
             session
@@ -174,11 +174,7 @@ while True:
 
         continue
 
-    if user_message in {
-        "冻结方案",
-        "确认冻结",
-        "/freeze",
-    }:
+    if command == "FREEZE":
 
         show_preview(
             session
