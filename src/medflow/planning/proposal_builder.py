@@ -173,11 +173,12 @@ class ProposalBuilderV02:
 
         add(
             field_path="exposure.unit",
-            title="暴露单位",
+            title="暴露报告单位（待 Data Binding 校验）",
             current_value=spec.exposure.unit,
             reason=(
-                "单位有助于后续解释和数据绑定，"
-                "但当前语义方案允许暂不填写。"
+                "这里仅记录研究者希望采用的报告单位。"
+                "真实数据源单位必须在 Data Binding 阶段核对，"
+                "当前可暂不填写。"
             ),
             allow_custom=True,
             blocking=False,
