@@ -37,10 +37,10 @@ feat/research-spec-v0.2
 | Proposal Option / Item | ✅ | 机器值与人类标签分离 |
 | Generic Review Engine V0.2 | ✅ | 不按字段复制确认函数 |
 | Review Decision Log V0.2 | ✅ | 独立审计记录 |
-| Execution Research Spec V0.2 | ✅ | 执行语义与建议层分离 |
+| Research Plan V0.2 | ✅ | 研究计划与建议层分离；尚需 Data Binding |
 | 模糊语义 Fail Closed | ✅ | 执行层阻止待确认/视情况等 |
-| Execution Hash / Freeze V0.2 | ✅ | 已实现 |
-| Planning Bundle Store | ✅ | 三份 artifact 分离保存 |
+| Research Plan Hash / Freeze V0.2 | ✅ | 已实现 |
+| Planning Bundle Store | ✅ | proposal / review_log / research_plan 分离保存 |
 | V0.2 自动验收脚本 | ✅ | 已写入分支 |
 | V0.2 交互 Demo | ✅ | 已写入分支 |
 
@@ -94,13 +94,14 @@ V0.2 开始形成：
 → 候选方案
 → 人工审核
 → 审计日志
-→ 明确执行方案
+→ 冻结研究计划
 ```
 
 但真正跨出 Demo/MVP 的关键节点仍然是：
 
 ```text
 真实数据绑定
+→ 生成可执行分析任务
 → 自动 Workflow
 → 真实 Logistic
 → Result Registry
