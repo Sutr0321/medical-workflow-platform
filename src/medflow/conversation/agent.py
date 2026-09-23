@@ -25,6 +25,7 @@ class ConversationalPlanningAgentV03:
     - 不查真实数据列
     - 不把 AI 建议直接写入正式研究状态
     - 只有 explicit_updates 才允许后台落状态
+    - 单次模型响应异常时不让整个 Planning Session 崩溃
     """
 
     ALLOWED_UPDATE_PATHS = {
@@ -47,8 +48,21 @@ class ConversationalPlanningAgentV03:
         "analysis.method",
     }
 
-    def __init__(self):
-        self.client = create_deepseek_client()
+    def __init__(
+        self,
+        client=None,
+        max_attempts: int = 3,
+    ):
+        self.client = (
+            client
+            if client is not None
+            else create_deepseek_client()
+        )
+
+        self.max_attempts = max(
+            1,
+            max_attempts,
+        )
 
     def respond(
         self,
@@ -75,34 +89,48 @@ class ConversationalPlanningAgentV03:
 - 一次优先讨论 1~2 个真正会改变研究方案的问题
 - 不要一次抛出十几个问题
 
-但你必须遵守严格边界：
+不要向用户暴露内部 schema_version、field_path、
+Candidate Spec、V0.1 等实现细节。
+除非用户主动询问版本，否则自然讨论研究方案即可。
+
+必须遵守以下边界：
 
 1. 不能进行真实统计计算。
 2. 不能生成或执行 Python、R、SQL。
-3. 不能声称已经核实真实数据字典、真实列名、单位或编码。
-4. 真实 source column、真实 source unit、coding、派生规则属于后续 Data Binding。
+3. 不能声称已经核实真实数据字典、真实列名、实际单位或编码。
+4. 真实 source column、真实 source unit、coding、reference group、
+   transformation、derivation rule 属于后续 Data Binding。
 5. 不能把常识自动写成用户已经确认的事实。
-6. AI 的“建议”只能放在 suggestions。
-7. 只有用户在当前消息中明确说出的事实、选择或明确接受的上一轮建议，
-   才能放在 explicit_updates。
+6. AI 自己提出的候选建议只能放在 suggestions。
+7. 只有用户在当前消息中明确说出的事实、选择，
+   或明确接受的上一轮建议，才能放在 explicit_updates。
 8. 如果用户只是问“哪个好”“为什么”，不能把建议当作确认。
 9. 不允许因为 binary outcome 就自动确认 Logistic。
 10. 不允许因为“成年人”自动确认 age_min=18。
 11. 不允许自行确定疾病临床阈值。
-12. 当前平台只支持第一个最小闭环：
+12. 当前平台第一个最小执行闭环只支持：
     - study_design = cross_sectional
     - objective = association
     - outcome.data_type = binary
     - analysis.method = logistic_regression
     - missing_data.strategy = complete_case_global
-    如果用户想做当前版本尚不支持的方法，可以在自然语言回复中解释，
-    但不要伪造系统已经支持。
-13. 回复用户时不要展示 JSON、field_path 或内部 schema 名称。
-14. assistant_message 使用自然、专业、简洁的中文。
-15. 如果已有 pending_suggestions，而用户明确说“可以”“就这个”“按你说的”等，
+    如果用户想做当前尚未支持的方法，可以自然解释，
+    但不能伪装成已经支持。
+13. assistant_message 使用自然、专业、简洁的中文。
+14. 如果已有 pending_suggestions，而用户明确说
+    “可以”“就这个”“按你说的”“选第3种”等，
     可以结合上下文把被接受的建议写入 explicit_updates。
+15. 如果用户用“1、2、3”“第3种”“选2”等方式回应，
+    必须结合最近一轮对话中的编号选项理解，
+    不要要求用户机械重复整段文字。
 16. covariates 的 explicit_updates 必须使用字符串数组，例如：
     ["年龄", "性别", "BMI"]
+17. outcome.definition 只有在定义已经足够明确时才写入 explicit_updates。
+    如果用户只确认“采用组合定义”，但血压阈值、测量规则等仍未明确，
+    可以先在自然语言中记录方向并继续追问，
+    不要假装完整定义已经确认。
+18. exposure.unit 在当前阶段只能表示研究者计划采用的报告单位，
+    不能声称是真实数据源单位。
 
 内部必须返回 JSON，格式：
 
@@ -127,6 +155,7 @@ class ConversationalPlanningAgentV03:
 
 如果当前消息没有明确更新，就返回空 explicit_updates。
 如果没有需要提出的候选，就返回空 suggestions。
+只返回 JSON，不要输出 Markdown code fence。
 """
 
         context = {
@@ -147,12 +176,29 @@ class ConversationalPlanningAgentV03:
             ),
         }
 
-        response = self.client.chat.completions.create(
-            model="deepseek-flash",
-            messages=[
+        last_error: Exception | None = None
+
+        for attempt in range(
+            1,
+            self.max_attempts + 1,
+        ):
+
+            retry_note = ""
+
+            if attempt > 1:
+                retry_note = (
+                    "\n\n重要：上一次接口返回为空或格式无效。"
+                    "这一次必须只返回一个完整、合法的 JSON object，"
+                    "不要返回空字符串，不要输出 Markdown。"
+                )
+
+            messages = [
                 {
                     "role": "system",
-                    "content": system_prompt,
+                    "content": (
+                        system_prompt
+                        + retry_note
+                    ),
                 },
                 {
                     "role": "user",
@@ -161,33 +207,86 @@ class ConversationalPlanningAgentV03:
                         ensure_ascii=False,
                     ),
                 },
-            ],
-            response_format={
-                "type": "json_object"
-            },
-            temperature=0,
+            ]
+
+            request_kwargs = {
+                "model": "deepseek-flash",
+                "messages": messages,
+                "temperature": 0,
+            }
+
+            # 前两次优先使用 JSON mode。
+            # 最后一次取消 response_format，
+            # 防止某些瞬时 JSON-mode 异常导致空内容。
+            if attempt < self.max_attempts:
+                request_kwargs[
+                    "response_format"
+                ] = {
+                    "type": "json_object"
+                }
+
+            try:
+
+                response = (
+                    self.client
+                    .chat
+                    .completions
+                    .create(
+                        **request_kwargs
+                    )
+                )
+
+                content = (
+                    response
+                    .choices[0]
+                    .message
+                    .content
+                )
+
+                if (
+                    content is None
+                    or not content.strip()
+                ):
+                    raise RuntimeError(
+                        "Planning Agent 返回空内容。"
+                    )
+
+                raw = self._parse_json(
+                    content
+                )
+
+                turn = (
+                    PlanningAgentTurnV03
+                    .model_validate(raw)
+                )
+
+                self._validate_paths(
+                    turn
+                )
+
+                return turn
+
+            except Exception as exc:
+                last_error = exc
+
+        # 连续多次异常时不让整段会话崩溃。
+        # 不做任何状态更新，并保留上一轮 suggestions，
+        # 让用户可以直接重述上一条选择。
+        return PlanningAgentTurnV03(
+            assistant_message=(
+                "刚才模型响应出现了临时异常，"
+                "这一轮没有修改研究方案。"
+                "请把你刚才的选择再说一遍即可；"
+                "例如“采用第3种定义，结局按二分类”。"
+            ),
+            explicit_updates=[],
+            suggestions=pending_suggestions,
         )
 
-        content = (
-            response
-            .choices[0]
-            .message
-            .content
-        )
-
-        if not content:
-            raise RuntimeError(
-                "Planning Agent 返回内容为空。"
-            )
-
-        raw = self._parse_json(
-            content
-        )
-
-        turn = (
-            PlanningAgentTurnV03
-            .model_validate(raw)
-        )
+    def _validate_paths(
+        self,
+        turn: PlanningAgentTurnV03,
+    ) -> None:
 
         for update in (
             turn.explicit_updates
@@ -217,14 +316,17 @@ class ConversationalPlanningAgentV03:
                     f"{suggestion.field_path}"
                 )
 
-        return turn
-
     @staticmethod
     def _parse_json(
         content: str,
     ) -> dict:
 
         content = content.strip()
+
+        if not content:
+            raise RuntimeError(
+                "Planning Agent JSON 内容为空。"
+            )
 
         try:
             return json.loads(content)
@@ -233,14 +335,14 @@ class ConversationalPlanningAgentV03:
             pass
 
         cleaned = re.sub(
-            r"^\`\`\`(?:json)?\s*",
+            r"^```(?:json)?\s*",
             "",
             content,
             flags=re.IGNORECASE,
         )
 
         cleaned = re.sub(
-            r"\s*\`\`\`$",
+            r"\s*```$",
             "",
             cleaned,
         )
@@ -248,8 +350,33 @@ class ConversationalPlanningAgentV03:
         try:
             return json.loads(cleaned)
 
-        except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                "无法解析 Planning Agent JSON：\n"
-                + content
-            ) from exc
+        except json.JSONDecodeError:
+            pass
+
+        start = content.find("{")
+        end = content.rfind("}")
+
+        if (
+            start != -1
+            and end != -1
+            and end > start
+        ):
+
+            candidate_json = (
+                content[
+                    start:end + 1
+                ]
+            )
+
+            try:
+                return json.loads(
+                    candidate_json
+                )
+
+            except json.JSONDecodeError:
+                pass
+
+        raise RuntimeError(
+            "无法解析 Planning Agent JSON：\n"
+            + content
+        )
