@@ -20,6 +20,11 @@
 
 ### V0.3 Changed
 
+- 对话处理拆成“状态解释 → 更新 → 重新计算目标 → 回复生成”两阶段
+- 已确认字段从下一轮主动讨论目标中排除
+- Research Plan 不再被当前 Logistic / complete-case 实现能力限制
+- 新增独立 Execution Capability Checker，平台支持性不再反向修改科研方案
+
 - Research Planning 主交互从“逐字段确认”改为“自然语言多轮对话”
 - Candidate Research Spec 继续作为后台结构化状态
 - AI 建议与用户明确决定严格分离
