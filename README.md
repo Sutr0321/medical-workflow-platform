@@ -60,10 +60,10 @@ V0.2 重点解决一个问题：
 - Proposal Item / Option
 - Generic Review Engine
 - Review Decision Log
-- Execution Research Spec V0.2
+- Research Plan V0.2
 - 模糊语义拦截
-- Execution Spec content hash
-- Proposal / Review Log / Execution Spec 分离存储
+- Research Plan content hash
+- Proposal / Review Log / Research Plan 分离存储
 - V0.2 自动验收脚本
 - V0.2 交互 Demo
 
@@ -99,9 +99,9 @@ V0.2 重点解决一个问题：
 
 用于审计人工决策。
 
-### 3. Frozen Execution Research Spec
+### 3. Frozen Research Plan
 
-只保留后续执行真正需要的明确机器语义：
+冻结已经人工确认的研究意图和标准化语义：
 
 ```text
 cross_sectional
@@ -122,7 +122,7 @@ complete_case_global
 - 备选方案
 - open issues
 
-真实数据列名不放在 Execution Spec 中，留到后续 Data Binding。
+真实数据列名、实际源单位、编码和派生规则不放在 Research Plan 中，留到后续 Data Binding。Research Plan 本身不能直接执行。
 
 ## 运行
 
@@ -162,13 +162,13 @@ python examples\run_research_spec_v02_demo.py
 V0.2 正式冻结后会分开保存：
 
 ```text
-artifacts/planning_v02/<spec_id>/v1/
+artifacts/planning_v02/<plan_id>/v1/
 ├── proposal.json
 ├── review_log.json
-└── execution_spec.json
+└── research_plan.json
 ```
 
-其中后续 Rule / YAML / Workflow **只允许读取 execution_spec.json**。
+其中后续必须先完成 Data Binding；只有 Research Plan + Data Binding 才能生成真正的可执行分析任务。
 
 ## 协作
 
