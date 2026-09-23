@@ -30,11 +30,11 @@ from medflow.planning.proposal_builder import (
 from medflow.planning.review_engine import (
     ReviewEngineV02,
 )
-from medflow.planning.execution_builder import (
-    ExecutionSpecBuilderV02,
+from medflow.planning.research_plan_builder import (
+    ResearchPlanBuilderV02,
 )
 from medflow.planning.freeze_service_v02 import (
-    ExecutionSpecFreezeServiceV02,
+    ResearchPlanFreezeServiceV02,
 )
 from medflow.planning.store_v02 import (
     ResearchPlanningStoreV02,
@@ -247,15 +247,27 @@ def review_proposal(
 
         if item.allow_custom:
 
-            raw = input(
-                "请输入最终值"
-                + (
+            prompt = "请输入最终值"
+
+            if (
+                item.field_path
+                == "covariates"
+            ):
+                prompt += (
                     "（多个协变量用英文逗号分隔）"
-                    if item.field_path
-                    == "covariates"
-                    else ""
                 )
-                + "："
+
+            if (
+                item.field_path
+                == "exposure.unit"
+            ):
+                prompt += (
+                    "（这里只记录计划报告单位，"
+                    "真实数据源单位将在 Data Binding 校验）"
+                )
+
+            raw = input(
+                prompt + "："
             )
 
             value = (
@@ -361,8 +373,8 @@ reviewed_candidate, review_log = (
 )
 
 
-execution_spec = (
-    ExecutionSpecBuilderV02
+research_plan = (
+    ResearchPlanBuilderV02
     .build(
         reviewed_candidate=reviewed_candidate,
         review_log=review_log,
@@ -372,29 +384,38 @@ execution_spec = (
 
 print()
 print("========================================")
-print("最终执行方案预览")
+print("正式研究计划预览")
 print("========================================")
 print_json(
-    execution_spec
+    research_plan
+)
+
+print()
+print(
+    "注意：这份 Research Plan 还不能直接执行。"
+)
+print(
+    "真实数据列名、实际单位、编码和派生规则"
+    "将在下一阶段 Data Binding 中核对。"
 )
 
 
 if not ask_yes_no(
-    "是否正式冻结以上 Execution Research Spec？"
+    "是否正式冻结以上 Research Plan？"
 ):
 
     print()
     print(
-        "未冻结。本次审核结果不会作为正式执行方案。"
+        "未冻结。本次审核结果不会作为正式研究计划。"
     )
 
     sys.exit(0)
 
 
 frozen = (
-    ExecutionSpecFreezeServiceV02
+    ResearchPlanFreezeServiceV02
     .freeze(
-        execution_spec=execution_spec,
+        research_plan=research_plan,
         review_log=review_log,
     )
 )
@@ -412,21 +433,21 @@ saved_dir = (
     store.save_bundle(
         proposal=proposal,
         review_log=review_log,
-        frozen_spec=frozen,
+        frozen_plan=frozen,
     )
 )
 
 
 print()
 print("========================================")
-print("V0.2 Research Spec 已正式冻结")
+print("V0.2 Research Plan 已正式冻结")
 print("========================================")
 print()
 print(
-    f"Spec ID：{frozen.spec_id}"
+    f"Plan ID：{frozen.plan_id}"
 )
 print(
-    f"Version：V{frozen.spec_version}"
+    f"Version：V{frozen.plan_version}"
 )
 print(
     f"Review ID：{frozen.review_id}"
@@ -451,10 +472,13 @@ print(
 )
 print(
     saved_dir
-    / "execution_spec.json"
+    / "research_plan.json"
 )
 print()
 print(
-    "后续 Rule / YAML / Workflow "
-    "只允许读取 execution_spec.json。"
+    "下一阶段：Data Binding。"
+)
+print(
+    "完成真实变量、单位、编码与派生规则绑定后，"
+    "才生成可执行分析任务。"
 )
