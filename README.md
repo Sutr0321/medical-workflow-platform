@@ -1,185 +1,177 @@
 # Medical Workflow Platform
 
-医学数据分析工作流平台（Medical Workflow Platform）面向医学科研数据分析场景，目标是把“研究问题 → 研究方案 → 数据绑定 → 工作流 → 统计算法 → 结果”拆成可确认、可追溯、可验证的标准流程。
+医学数据分析工作流平台（Medical Workflow Platform）面向医学科研数据分析场景。
 
-> 核心边界：LLM 负责自然语言理解和候选方案整理；正式统计执行由固定规则、版本化工作流和已验证算法模块完成。
+项目目标不是让大模型直接做统计，而是把：
+
+```text
+研究主题
+→ 对话式方案规划
+→ 冻结 Research Plan
+→ Data Binding
+→ Executable Analysis Spec
+→ Workflow
+→ 已验证算法
+→ Result Registry
+```
+
+做成可确认、可追溯、可复现的标准流程。
+
+## 当前产品形态
+
+V0.3 开始，Research Planning 不再采用“AI 抽字段 + 用户填表”的主交互方式。
+
+用户只需要先给一个课题主题，然后像正常聊天一样和 AI 讨论：
+
+```text
+用户：我想研究维生素D与高血压的关系
+
+AI：可以。我们先把数据来源和研究设计讨论清楚……
+    你计划使用什么数据库？
+
+用户：NHANES 2017-2018，20岁以上成年人。
+
+AI：好的，目前已经明确……
+    接下来需要讨论结局定义……
+```
+
+后台同时维护结构化 Research State。
+
+用户可以随时：
+
+```text
+预览方案
+冻结方案
+退出
+```
 
 ## 当前架构
 
 ```text
-研究问题
+课题主题
   ↓
-LLM Semantic Extractor
+Conversational Planning Agent
   ↓
-Candidate Research Spec
+Planning Session
+  ├── conversation messages
+  ├── current Candidate Research Spec
+  ├── confirmed decisions
+  ├── pending AI suggestions
+  └── unresolved fields
   ↓
-Candidate Proposal
+Research Plan Preview
   ↓
-科研人员人工审核
+用户确认冻结
   ↓
-Review Decision Log
-  ↓
-Frozen Execution Research Spec
+Frozen Research Plan
   ↓
 Data Binding
   ↓
-Rule / YAML Template
+Executable Analysis Spec
   ↓
-DAG
+Rule / YAML / DAG / Workflow
   ↓
-Workflow Engine
-  ↓
-Algorithm Registry / Algorithm Block
+Algorithm Registry
   ↓
 Result Registry
   ↓
-Golden Test / Publication Output
+Golden Test
 ```
 
-## 当前状态
+## AI 的职责
 
-稳定基线：
+AI 可以：
+
+- 理解研究主题和上下文
+- 和科研人员自然对话
+- 解释为什么某个问题需要确认
+- 提出有限候选方案和理由
+- 从用户当前消息中提取明确决定
+- 一次推进 1–2 个真正重要的问题
+
+AI 不可以：
+
+- 把自己的建议偷偷写成“已确认”
+- 因为结局是 binary 就自动确认 Logistic
+- 因为用户说“成年人”就自动设 age_min=18
+- 自行确定疾病临床阈值
+- 声称已核实真实数据列名、实际单位或编码
+- 直接进行正式统计计算
+
+真实 source column、source unit、coding、reference group 和 derivation rule 属于后续 Data Binding。
+
+## V0.3 新增
+
+- `PlanningSessionV03`
+- 对话消息历史
+- 用户明确决策记录
+- AI pending suggestions
+- `ConversationalPlanningAgentV03`
+- `PlanningSessionServiceV03`
+- 确定性 readiness checker
+- 人类可读 Research Plan Preview
+- 对话完成后的确定性冻结
+- conversation transcript / review log / research plan 分离存储
+- CLI 对话式 Demo
+- V0.3 自动验收脚本
+
+## 运行
+
+先切到 V0.3 分支：
+
+```bat
+git fetch origin
+git checkout -b feat/conversational-planning-v0.3 origin/feat/conversational-planning-v0.3
+```
+
+如果本地已经存在该分支：
+
+```bat
+git checkout feat/conversational-planning-v0.3
+git pull origin feat/conversational-planning-v0.3
+```
+
+### 自动验收
+
+```bat
+python examples\test_conversational_planning_v03.py
+```
+
+这个测试不调用 DeepSeek。
+
+### 对话式 Demo
+
+```bat
+python examples\run_conversational_planning_v03.py
+```
+
+运行后直接像聊天一样输入即可。
+
+## 冻结后的产物
+
+```text
+artifacts/conversations_v03/<plan_id>/v1/
+├── planning_session.json
+├── transcript.json
+├── review_log.json
+└── research_plan.json
+```
+
+Research Plan 仍然不是最终可执行统计任务。
+
+下一阶段：
+
+```text
+Frozen Research Plan
+→ Data Binding
+→ Executable Analysis Spec
+```
+
+## 当前稳定基线
 
 ```text
 v0.1.0-schema-contract
 ```
 
-当前开发分支：
-
-```text
-feat/research-spec-v0.2
-```
-
-V0.2 重点解决一个问题：
-
-> 不再把“AI/系统给人看的候选建议”和“真正给机器执行的 Research Spec”混在同一个对象里。
-
-当前已增加：
-
-- Candidate Proposal V0.2
-- Proposal Item / Option
-- Generic Review Engine
-- Review Decision Log
-- Research Plan V0.2
-- 模糊语义拦截
-- Research Plan content hash
-- Proposal / Review Log / Research Plan 分离存储
-- V0.2 自动验收脚本
-- V0.2 交互 Demo
-
-真实 Logistic Regression、Data Binding、Rule Engine、DAG 和 Workflow Engine 仍未实现。
-
-## V0.2 三层分离
-
-### 1. Candidate Proposal
-
-面向科研人员。
-
-可以包含：
-
-- 当前值
-- 推荐/说明理由
-- 受控候选项
-- 自定义输入入口
-- blocking 状态
-- provenance
-
-它不是 Workflow 输入。
-
-### 2. Review Decision Log
-
-记录：
-
-- 谁审核
-- 审核时间
-- 哪个字段
-- 原始值
-- 最终值
-- keep / choose / custom / clear
-
-用于审计人工决策。
-
-### 3. Frozen Research Plan
-
-冻结已经人工确认的研究意图和标准化语义：
-
-```text
-cross_sectional
-association
-binary
-continuous
-logistic_regression
-complete_case_global
-```
-
-禁止：
-
-- 待确认
-- 视情况而定
-- 若为横断面
-- 可选
-- 推荐理由
-- 备选方案
-- open issues
-
-真实数据列名、实际源单位、编码和派生规则不放在 Research Plan 中，留到后续 Data Binding。Research Plan 本身不能直接执行。
-
-## 运行
-
-Windows：
-
-```bat
-python -m venv .venv
-.venv\Scripts\activate
-pip install pydantic openai python-dotenv
-```
-
-配置根目录 `.env`：
-
-```text
-DEEPSEEK_API_KEY=你的API_KEY
-```
-
-### V0.1 基线测试
-
-```bat
-python examples\test_schema_contracts.py
-python examples\test_candidate_update.py
-```
-
-### V0.2 新增验收
-
-```bat
-python examples\test_research_spec_v02.py
-```
-
-### V0.2 新交互 Demo
-
-```bat
-python examples\run_research_spec_v02_demo.py
-```
-
-V0.2 正式冻结后会分开保存：
-
-```text
-artifacts/planning_v02/<plan_id>/v1/
-├── proposal.json
-├── review_log.json
-└── research_plan.json
-```
-
-其中后续必须先完成 Data Binding；只有 Research Plan + Data Binding 才能生成真正的可执行分析任务。
-
-## 协作
-
-- `main`：稳定版本
-- `feat/*`：功能分支
-- `fix/*`：修复分支
-- Pull Request：Review 后合并
-- Issue：记录目标、范围、验收标准
-
-详细见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-项目进度见 [docs/03_progress.md](docs/03_progress.md)。
-
-开发路线见 [docs/04_roadmap.md](docs/04_roadmap.md)。
+V0.2 提供 Proposal / Review / Research Plan 分层；
+V0.3 在此基础上加入自然语言多轮对话入口。
