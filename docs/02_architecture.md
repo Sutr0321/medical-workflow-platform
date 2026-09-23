@@ -76,7 +76,19 @@ FROZEN
 
 ## 4. AI 输出不是直接改数据库
 
-每一轮 Planning Agent 内部返回：
+V0.3.1 起，每一轮拆成两个阶段：
+
+```text
+用户消息
+→ interpret_updates
+→ 确定性更新 Research State
+→ 重新计算 discussion_targets
+→ compose_reply
+```
+
+因此回复生成时看到的一定是本轮更新后的状态。
+
+原始 Planning Agent 内部结构仍区分：
 
 ```text
 assistant_message
@@ -99,6 +111,8 @@ suggestions
 ### suggestions
 
 AI 自己提出的候选方案只能进入 pending suggestions。
+
+已确认字段从 `discussion_targets` 中排除，除非用户主动要求修改，否则 AI 不允许再次主动询问。
 
 例如：
 
@@ -127,6 +141,8 @@ V0.3 并没有把可靠性重新交给 LLM。
 因此：
 
 > 对用户是聊天，对系统是结构化状态机。
+
+另外，Research Plan 与当前执行能力分离。科研人员可以冻结科研上合理但当前执行引擎尚未实现的方案；独立 Capability Checker 只负责报告支持情况，不能反向修改 Research Plan。
 
 ## 6. Preview
 
