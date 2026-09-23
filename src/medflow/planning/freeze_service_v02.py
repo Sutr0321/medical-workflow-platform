@@ -3,29 +3,32 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from medflow.contracts.execution_spec import (
-    ExecutionResearchSpecV02,
-    FrozenExecutionSpecV02,
+from medflow.contracts.research_plan import (
+    FrozenResearchPlanV02,
+    ResearchPlanV02,
 )
 from medflow.contracts.review_log import (
     ReviewDecisionLogV02,
 )
 
 
-class ExecutionSpecFreezeServiceV02:
+class ResearchPlanFreezeServiceV02:
     """
-    V0.2 Execution Spec 冻结服务。
+    V0.2 Research Plan 冻结服务。
 
-    从这里开始，后续 Rule / YAML / Workflow
-    只读取 frozen.execution_spec。
+    这里冻结的是“研究计划”，
+    不是可直接执行的统计任务。
+
+    后续仍需经过 Data Binding，
+    才能进入 Rule / YAML / Workflow。
     """
 
     @staticmethod
     def freeze(
         *,
-        execution_spec: ExecutionResearchSpecV02,
+        research_plan: ResearchPlanV02,
         review_log: ReviewDecisionLogV02,
-    ) -> FrozenExecutionSpecV02:
+    ) -> FrozenResearchPlanV02:
 
         if (
             review_log.status
@@ -36,20 +39,20 @@ class ExecutionSpecFreezeServiceV02:
             )
 
         content_hash = (
-            ExecutionSpecFreezeServiceV02
+            ResearchPlanFreezeServiceV02
             ._calculate_hash(
-                execution_spec
+                research_plan
             )
         )
 
-        return FrozenExecutionSpecV02(
-            spec_id=(
-                "RS2-"
+        return FrozenResearchPlanV02(
+            plan_id=(
+                "RP2-"
                 + uuid.uuid4().hex[
                     :12
                 ].upper()
             ),
-            spec_version=1,
+            plan_version=1,
             status="FROZEN",
             content_hash=content_hash,
             frozen_at=datetime.now(
@@ -61,18 +64,18 @@ class ExecutionSpecFreezeServiceV02:
             reviewed_by=(
                 review_log.reviewed_by
             ),
-            execution_spec=(
-                execution_spec
+            research_plan=(
+                research_plan
             ),
         )
 
     @staticmethod
     def _calculate_hash(
-        execution_spec: ExecutionResearchSpecV02,
+        research_plan: ResearchPlanV02,
     ) -> str:
 
         canonical_json = json.dumps(
-            execution_spec.model_dump(
+            research_plan.model_dump(
                 mode="json"
             ),
             ensure_ascii=False,
