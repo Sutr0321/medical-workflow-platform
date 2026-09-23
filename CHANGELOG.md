@@ -2,70 +2,56 @@
 
 ## [Unreleased]
 
-### Added
+### V0.3 Added
 
-- Candidate Proposal V0.2
-- Proposal Item / Option Contract
-- Generic Review Engine V0.2
-- Review Decision Log V0.2
-- Research Plan V0.2
-- Frozen Research Plan V0.2
-- Fuzzy semantic Fail-Closed check
-- Proposal / Review Log / Research Plan bundle store
-- Research Planning V0.2 acceptance test
-- Research Planning V0.2 interactive demo
+- PlanningSessionV03
+- PlanningMessageV03
+- PlanningDecisionV03
+- PlanningSuggestionV03
+- PlanningAgentTurnV03
+- ConversationalPlanningAgentV03
+- PlanningSessionServiceV03
+- ConversationalReadinessV03
+- ResearchPlanPreviewV03
+- ConversationalPlanningFinalizerV03
+- ConversationPlanningStoreV03
+- Conversational Planning acceptance test
+- Conversational Planning CLI demo
 
-### Changed
+### V0.3 Changed
 
-- 将“候选建议层”和“机器执行层”分离
-- 冻结对象改为 Research Plan；Data Binding 完成后才生成可执行分析任务
-- 将真实数据列名、实际单位、编码和派生规则明确推迟到 Data Binding 阶段
-- 协作路线调整为先完成 V0.2，再进入 Data Binding / Rule / YAML
+- Research Planning 主交互从“逐字段确认”改为“自然语言多轮对话”
+- Candidate Research Spec 继续作为后台结构化状态
+- AI 建议与用户明确决定严格分离
+- Freeze 保持确定性，不由 LLM 决定
+- Frozen Research Plan 仍需经过 Data Binding 才能执行
 
 ### Planned
 
+- Planning Session persistence / resume
 - Data Binding Contract
+- Executable Analysis Spec
 - Rule Engine
-- YAML Template
-- YAML → DAG
-- DAG Validator
-- Algorithm Registry
+- YAML / DAG
 - Workflow Engine
+- Algorithm Registry
 - Result Registry
 - Real Logistic Regression Block
 - Golden Test
+- Web Chat UI
 
 ## [v0.1.0-schema-contract] - 2026-09-23
 
 ### Added
 
 - DeepSeek API Client
-- Natural language → Candidate Research Spec
-- Candidate Research Spec Pydantic Schema
-- Candidate fixed Validator
-- open issues
-- Candidate updater
-- Readiness checker
-- Human review service
-- Reviewed Research Spec
+- Candidate Research Spec
+- Deterministic Validator
+- Candidate Updater
+- Readiness Checker
+- Human Review Service
 - Frozen Research Spec
-- Research Spec ID and version
-- SHA-256 content hash
-- Frozen JSON store
-- Algorithm Input Schema
-- Algorithm Output Schema
-- Algorithm Estimate Schema
-- Result Record Schema
-- Research Spec interactive Demo
-- Schema Contract test script
-
-### Verified
-
-- Incomplete Research Spec cannot be confirmed
-- Same Research Spec content produces stable content hash
-- Frozen Research Spec cannot be directly modified
-- Existing Frozen V1 file cannot be overwritten
-- Invalid P value is rejected
-- Missing required algorithm input is rejected
-- Invalid sample size is rejected
-- Invalid spec version is rejected
+- Research Spec ID / Version / Hash
+- Algorithm I/O Schema
+- Result Schema
+- Schema Contract tests
