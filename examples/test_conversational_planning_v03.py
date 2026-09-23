@@ -37,6 +37,9 @@ from medflow.contracts.planning_session import (
     PlanningMessageV03,
     PlanningSessionV03,
 )
+from medflow.conversation.commands import (
+    PlanningCommandRouterV03,
+)
 from medflow.conversation.finalizer import (
     ConversationalPlanningFinalizerV03,
 )
@@ -213,6 +216,88 @@ assert targets == [
 
 print(
     "PASS：已确认的暴露分析形式不会被再次主动询问"
+)
+
+print()
+print("2.5 冻结命令必须由系统路由")
+
+assert (
+    PlanningCommandRouterV03
+    .route("冻结")
+    == "FREEZE"
+)
+
+assert (
+    PlanningCommandRouterV03
+    .route("冻结方案")
+    == "FREEZE"
+)
+
+assert (
+    PlanningCommandRouterV03
+    .route("请冻结方案")
+    == "FREEZE"
+)
+
+print(
+    "PASS：冻结类命令不会再进入普通 LLM 对话"
+)
+
+
+print()
+print("2.6 多变量模型但协变量为空时禁止冻结")
+
+no_covariate = (
+    build_complete_candidate()
+)
+
+no_covariate_data = (
+    no_covariate.model_dump()
+)
+
+no_covariate_data[
+    "covariates"
+] = []
+
+no_covariate_data[
+    "analysis"
+][
+    "method"
+] = (
+    "survey-weighted multivariable logistic regression"
+)
+
+no_covariate = (
+    CandidateResearchSpecV01
+    .model_validate(
+        no_covariate_data
+    )
+)
+
+no_covariate.open_issues = (
+    CandidateSpecValidator
+    .validate(no_covariate)
+)
+
+assert (
+    ConversationalReadinessV03
+    .is_ready(no_covariate)
+    is False
+)
+
+assert any(
+    "协变量框架仍为空"
+    in reason
+    for reason in (
+        ConversationalReadinessV03
+        .blocking_reasons(
+            no_covariate
+        )
+    )
+)
+
+print(
+    "PASS：多变量模型 + 空协变量不会再 READY_TO_FREEZE"
 )
 
 
