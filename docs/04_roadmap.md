@@ -1,148 +1,112 @@
 # 04 开发路线图
 
-## 总目标
-
-先完成一条可验证的真实闭环：
-
-```text
-研究问题
-↓
-Candidate Research Spec
-↓
-Candidate Proposal
-↓
-人工审核
-↓
-Review Decision Log
-↓
-Frozen Research Plan
-↓
-Data Binding
-↓
-Executable Analysis Spec
-↓
-Rule / YAML
-↓
-DAG
-↓
-Workflow
-↓
-真实 Logistic Regression
-↓
-Result Registry
-↓
-Golden Test
-```
-
 ## Phase 1：Schema Contract V0.1
 
-状态：✅ 已完成
-
-标签：
-
-```text
-v0.1.0-schema-contract
-```
+状态：✅
 
 ## Phase 1.5：Research Planning / Review V0.2
+
+状态：✅ 已形成底层分层设计
+
+核心：
+
+- Proposal
+- Review Log
+- Research Plan
+- Freeze / Hash
+
+## Phase 1.6：Conversational Research Planning V0.3
 
 状态：⏳ 已开发，等待本地验收
 
 目标：
 
-把“给人讨论的候选建议”和“给机器执行的正式 Spec”分离。
-
-新增：
-
-- CandidateProposalV02
-- ProposalItemV02
-- ProposalOptionV02
-- ReviewDecisionLogV02
-- Generic Review Engine
-- ResearchPlanV02
-- FrozenResearchPlanV02
-- 模糊语义拦截
-- 三文件 artifact bundle
+```text
+课题主题
+→ 多轮自然语言对话
+→ 实时 Research Plan
+→ 用户确认
+→ Frozen Research Plan
+```
 
 验收：
 
-- Proposal 与 Research Plan 分离
-- 所有人工选择进入 Review Log
-- 相同 Research Plan 产生相同 hash
-- Frozen 不可修改
-- “待确认/视情况/可选”等不能进入正式 Research Plan
+- 用户不需要逐字段填表
+- AI 一次优先推进 1–2 个关键问题
+- AI 建议不自动写成确认值
+- 用户明确表达的决定可更新结构化状态
+- 随时可预览 Research Plan
+- 不完整方案不能冻结
+- 完整方案可确定性冻结
+- transcript / review log / research plan 可审计
 
-## Phase 2：Data Binding Contract
+## Phase 2：Data Binding
 
 状态：⬜
 
 目标：
 
-把正式研究语义映射到真实数据。
+把 Frozen Research Plan 的研究概念映射到真实数据。
 
-例如：
-
-```text
-血清25-羟基维生素D
-→ LBXVIDMS
-
-高血压
-→ 派生变量 hypertension
-```
-
-Data Binding 负责：
+负责：
 
 - dataset version
 - source file
 - source variable
-- derived variable
-- unit
+- actual source unit
 - coding
 - reference group
 - transformation
+- derived variable
 - derivation rule
 
-原则：
+产物：
 
-> 不修改 Frozen Research Plan。Data Binding 完成后再生成真正的 Executable Analysis Spec。
+```text
+data_binding.json
+```
 
-## Phase 3：Rule + YAML Template
+## Phase 3：Executable Analysis Spec
 
 状态：⬜
 
-第一版只支持：
+输入：
+
+```text
+Frozen Research Plan
++
+Validated Data Binding
+```
+
+输出：
+
+```text
+Executable Analysis Spec
+```
+
+它才是 Rule / Workflow 的正式输入。
+
+## Phase 4：Rule + YAML
+
+状态：⬜
+
+第一条最小闭环：
 
 ```text
 cross_sectional
++
 binary outcome
++
 logistic_regression
 ```
 
-验收：
-
-- 相同 Execution Spec 选择相同模板
-- 不调用 LLM
-- 不支持组合 Fail Closed
-
-## Phase 4：YAML → DAG
+## Phase 5：DAG + Workflow Engine
 
 状态：⬜
 
-需要：
-
-- Node / Edge Schema
-- DAG Parser
-- DAG Validator
-- 环检测
-- 拓扑排序
-
-## Phase 5：Algorithm Registry + Mock Block
+## Phase 6：Algorithm Registry
 
 状态：⬜
-
-目标：
-
-Workflow 只能通过 Registry 找算法。
 
 第一版注册：
 
@@ -150,69 +114,23 @@ Workflow 只能通过 Registry 找算法。
 logistic_regression
 ```
 
-## Phase 6：Workflow Engine
+## Phase 7：真实 Logistic Regression
 
 状态：⬜
 
-第一版：
-
-- 单机
-- 串行
-- 明确状态
-- 错误即停止
-
-## Phase 7：Result Registry
+## Phase 8：Result Registry
 
 状态：⬜
-
-结果至少关联：
-
-- spec_id
-- spec_version
-- data_binding_id
-- workflow/template version
-- algorithm_name
-- algorithm_version
-- n_used
-- estimate
-- CI
-- P
-- timestamp
-
-## Phase 8：真实 Logistic Regression Block
-
-状态：⬜
-
-用真实测试数据执行：
-
-```text
-暴露
-+
-二分类结局
-+
-协变量
-→ OR / 95%CI / P
-```
 
 ## Phase 9：Golden Test
 
 状态：⬜
 
-固定：
-
-- 测试数据
-- Execution Spec
-- Data Binding
-- 人工标准代码
-- 人工标准结果
-- 自动结果
-- 数值容差
-
-只有通过 Golden Test 的算法版本才允许标记为 validated。
+自动结果必须与人工标准代码在预设容差内一致。
 
 ## Phase 10：算法扩展
 
-在闭环稳定后再增加：
+闭环稳定后再增加：
 
 - Linear Regression
 - Cox Regression
@@ -224,13 +142,17 @@ logistic_regression
 
 ## Phase 11：Web UI
 
-最后再做：
+后端会话与冻结机制稳定后，前端目标界面：
 
-- 研究问题输入
-- Proposal 审核
-- Review Log 查看
-- Execution Spec 查看
-- Workflow 状态
-- Result 展示
+```text
+┌────────────────────┬────────────────────┐
+│ AI 对话             │ Research Plan       │
+│                    │ 实时预览             │
+│ 用户 / AI 多轮讨论  │ 已确认 / 待讨论      │
+│                    │                     │
+└────────────────────┴────────────────────┘
+          [确认并冻结研究方案]
+```
 
-不在后端闭环稳定前投入复杂前端。
+前端只是消费已有 Planning Session / Preview / Freeze API，
+不重新实现业务逻辑。
