@@ -8,18 +8,18 @@
 - Proposal Item / Option Contract
 - Generic Review Engine V0.2
 - Review Decision Log V0.2
-- Execution Research Spec V0.2
-- Frozen Execution Spec V0.2
+- Research Plan V0.2
+- Frozen Research Plan V0.2
 - Fuzzy semantic Fail-Closed check
-- Proposal / Review Log / Execution Spec bundle store
+- Proposal / Review Log / Research Plan bundle store
 - Research Planning V0.2 acceptance test
 - Research Planning V0.2 interactive demo
 
 ### Changed
 
 - 将“候选建议层”和“机器执行层”分离
-- 后续 Rule / Workflow 只允许读取 Frozen Execution Spec
-- 将真实数据列名明确推迟到 Data Binding 阶段
+- 冻结对象改为 Research Plan；Data Binding 完成后才生成可执行分析任务
+- 将真实数据列名、实际单位、编码和派生规则明确推迟到 Data Binding 阶段
 - 协作路线调整为先完成 V0.2，再进入 Data Binding / Rule / YAML
 
 ### Planned
