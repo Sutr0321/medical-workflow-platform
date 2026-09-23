@@ -21,10 +21,9 @@ from medflow.planning.research_plan_builder import (
 
 class ConversationalPlanningFinalizerV03:
     """
-    把一段已讨论完整的 Planning Session
-    正式冻结为 Research Plan。
+    把已讨论完整的 Planning Session 冻结为 Research Plan。
 
-    冻结动作本身不调用 LLM。
+    冻结完全由确定性代码执行。
     """
 
     @staticmethod
@@ -34,21 +33,25 @@ class ConversationalPlanningFinalizerV03:
         reviewed_by: str,
     ):
 
+        blockers = (
+            ConversationalReadinessV03
+            .blocking_reasons(
+                session.current_candidate
+            )
+        )
+
+        if blockers:
+            raise ValueError(
+                "当前研究方案尚不能冻结：\n- "
+                + "\n- ".join(blockers)
+            )
+
         if (
             session.status
             != "READY_TO_FREEZE"
         ):
-            missing = (
-                ConversationalReadinessV03
-                .missing_fields(
-                    session.current_candidate
-                )
-            )
-
             raise ValueError(
-                "当前研究方案尚不能冻结。"
-                "仍缺少："
-                + ", ".join(missing)
+                "当前 Planning Session 状态不是 READY_TO_FREEZE。"
             )
 
         now = datetime.now(
