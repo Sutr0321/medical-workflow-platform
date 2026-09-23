@@ -6,6 +6,7 @@ from medflow.contracts.candidate_spec import (
     CandidateResearchSpecV01,
 )
 from medflow.contracts.planning_session import (
+    PlanningDecisionV03,
     PlanningMessageV03,
     PlanningSessionV03,
 )
@@ -66,6 +67,19 @@ class PlanningSessionServiceV03:
             )
         )
 
+        decisions = [
+            PlanningDecisionV03(
+                field_path=path,
+                value=self._get_path_value(
+                    candidate.model_dump(),
+                    path,
+                ),
+                evidence=topic,
+                decided_at=now,
+            )
+            for path in explicit_paths
+        ]
+
         session = PlanningSessionV03(
             session_id=(
                 "PS-"
@@ -83,6 +97,7 @@ class PlanningSessionServiceV03:
             ],
             current_candidate=candidate,
             confirmed_fields=explicit_paths,
+            decisions=decisions,
             pending_suggestions=[],
             created_at=now,
             updated_at=now,
@@ -183,6 +198,12 @@ class PlanningSessionServiceV03:
             ]
         )
 
+        decisions = list(
+            data[
+                "decisions"
+            ]
+        )
+
         for update in (
             turn.explicit_updates
         ):
@@ -206,6 +227,21 @@ class PlanningSessionServiceV03:
                     update.field_path
                 )
 
+            decisions.append(
+                PlanningDecisionV03(
+                    field_path=(
+                        update.field_path
+                    ),
+                    value=(
+                        update.value
+                    ),
+                    evidence=(
+                        update.evidence
+                    ),
+                    decided_at=now,
+                ).model_dump()
+            )
+
         if answers:
 
             candidate = (
@@ -223,6 +259,10 @@ class PlanningSessionServiceV03:
         data[
             "confirmed_fields"
         ] = confirmed_fields
+
+        data[
+            "decisions"
+        ] = decisions
 
         data[
             "pending_suggestions"
@@ -320,20 +360,13 @@ class PlanningSessionServiceV03:
 
         for path in candidate_paths:
 
-            current = data
-
-            for token in path.split("."):
-
-                if not isinstance(
-                    current,
-                    dict,
-                ):
-                    current = None
-                    break
-
-                current = current.get(
-                    token
+            current = (
+                PlanningSessionServiceV03
+                ._get_path_value(
+                    data,
+                    path,
                 )
+            )
 
             if current not in (
                 None,
@@ -347,3 +380,31 @@ class PlanningSessionServiceV03:
             )
 
         return result
+
+    @staticmethod
+    def _get_path_value(
+        data: dict,
+        path: str,
+    ):
+
+        if path == "covariates":
+            return [
+                item["name"]
+                for item in data["covariates"]
+            ]
+
+        current = data
+
+        for token in path.split("."):
+
+            if not isinstance(
+                current,
+                dict,
+            ):
+                return None
+
+            current = current.get(
+                token
+            )
+
+        return current
