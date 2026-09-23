@@ -25,8 +25,7 @@ class ReviewEngineV02:
     """
     Generic Review Engine。
 
-    不再为“研究设计、暴露、结局、分析方法”
-    分别手写确认函数。
+    不再为每个研究字段单独手写一个确认函数。
 
     输入：
     - Proposal
@@ -92,7 +91,7 @@ class ReviewEngineV02:
             if field_path not in selections:
 
                 if (
-                    original_value is None
+                    original_value in (None, [])
                     and item.blocking
                 ):
                     raise ValueError(
@@ -122,7 +121,7 @@ class ReviewEngineV02:
             ]
 
             if (
-                selected_value is None
+                selected_value in (None, [])
                 and item.blocking
             ):
                 raise ValueError(
@@ -170,9 +169,17 @@ class ReviewEngineV02:
                 )
             )
 
+            normalized_value = (
+                ReviewEngineV02
+                ._normalize_for_candidate(
+                    field_path,
+                    selected_value,
+                )
+            )
+
             answers[
                 field_path
-            ] = selected_value
+            ] = normalized_value
 
             decisions.append(
                 ReviewDecisionV02(
@@ -235,6 +242,48 @@ class ReviewEngineV02:
         )
 
         return updated, log
+
+    @staticmethod
+    def _normalize_for_candidate(
+        field_path: str,
+        value,
+    ):
+
+        if field_path != "covariates":
+            return value
+
+        if value is None:
+            return []
+
+        normalized = []
+
+        for item in value:
+
+            if isinstance(item, str):
+                name = item.strip()
+
+                if name:
+                    normalized.append(
+                        {
+                            "name": name,
+                            "column": None,
+                            "data_type": None,
+                            "unit": None,
+                            "reference_value": None,
+                        }
+                    )
+
+                continue
+
+            if isinstance(item, dict):
+                normalized.append(item)
+                continue
+
+            raise ValueError(
+                "covariates 必须是协变量名称列表。"
+            )
+
+        return normalized
 
     @staticmethod
     def _get_value(
