@@ -2,110 +2,88 @@
 
 最后更新：2026-09-23
 
-## 1. 稳定基线
+## 当前稳定基线
 
 ```text
 v0.1.0-schema-contract
 ```
 
-V0.1 已完成并保留，不直接重写历史版本。
-
-## 2. 当前开发
-
-当前分支：
+## 当前开发分支
 
 ```text
-feat/research-spec-v0.2
+feat/conversational-planning-v0.3
 ```
 
-当前目标：
+## 当前阶段
 
-> **Research Planning / Review Layer V0.2**
+> Conversational Research Planning V0.3
 
-## 3. 已完成
+目标：
 
-| 模块 | 状态 | 说明 |
-|---|---|---|
-| DeepSeek API | ✅ | 已接入 |
-| Candidate Research Spec V0.1 | ✅ | 稳定基线 |
-| 固定 Validator / open issues | ✅ | 不依赖 LLM |
-| Candidate Updater | ✅ | 支持结构化人工补充 |
-| Freeze / Hash / Store V0.1 | ✅ | 已测试 |
-| Algorithm I/O Schema | ✅ | 已测试 |
-| Result Schema | ✅ | 已测试 |
-| Candidate Proposal V0.2 | ✅ | 新增人类审核层 |
-| Proposal Option / Item | ✅ | 机器值与人类标签分离 |
-| Generic Review Engine V0.2 | ✅ | 不按字段复制确认函数 |
-| Review Decision Log V0.2 | ✅ | 独立审计记录 |
-| Research Plan V0.2 | ✅ | 研究计划与建议层分离；尚需 Data Binding |
-| 模糊语义 Fail Closed | ✅ | 执行层阻止待确认/视情况等 |
-| Research Plan Hash / Freeze V0.2 | ✅ | 已实现 |
-| Planning Bundle Store | ✅ | proposal / review_log / research_plan 分离保存 |
-| V0.2 自动验收脚本 | ✅ | 已写入分支 |
-| V0.2 交互 Demo | ✅ | 已写入分支 |
+> 用户给一个课题主题，之后像和 ChatGPT / Codex 一样多轮对话，最终预览并冻结 Research Plan。
 
-## 4. 待本地验收
-
-需要在本地执行：
-
-```bat
-python examples\test_research_spec_v02.py
-```
-
-通过后再执行：
-
-```bat
-python examples\run_research_spec_v02_demo.py
-```
-
-当前 GitHub 分支已写入代码，但在合并 main 前应完成本地测试。
-
-## 5. 尚未完成
+## 已实现
 
 | 模块 | 状态 |
 |---|---|
+| DeepSeek API | ✅ |
+| Candidate Research Spec | ✅ |
+| Deterministic Validator | ✅ |
+| Candidate Updater | ✅ |
+| Research Plan / Freeze / Hash | ✅ |
+| Planning Session V0.3 | ✅ |
+| Conversation Messages | ✅ |
+| Confirmed Decision History | ✅ |
+| Pending AI Suggestions | ✅ |
+| Conversational Planning Agent | ✅ |
+| Session Service | ✅ |
+| Deterministic Readiness | ✅ |
+| Research Plan Preview | ✅ |
+| Conversational Finalizer | ✅ |
+| Transcript / Review Log / Research Plan Store | ✅ |
+| V0.3 自动验收脚本 | ✅ |
+| V0.3 CLI 对话 Demo | ✅ |
+
+## 待本地验收
+
+```bat
+python examples\test_conversational_planning_v03.py
+```
+
+通过后运行：
+
+```bat
+python examples\run_conversational_planning_v03.py
+```
+
+## 尚未完成
+
+| 模块 | 状态 |
+|---|---|
+| Planning Session 持久化恢复 | ⬜ |
+| Web Chat UI | ⬜ |
 | Data Binding Contract | ⬜ |
+| Executable Analysis Spec | ⬜ |
 | Rule Engine | ⬜ |
 | YAML Template | ⬜ |
-| YAML → DAG | ⬜ |
-| DAG Validator | ⬜ |
+| DAG / Workflow Engine | ⬜ |
 | Algorithm Registry | ⬜ |
-| Mock Algorithm Block | ⬜ |
-| Workflow Engine | ⬜ |
 | Result Registry | ⬜ |
 | 真实 Logistic Regression Block | ⬜ |
 | Golden Test | ⬜ |
-| Web 前端 | ⬜ |
 
-## 6. 当前判断
+## 当前关键边界
 
-项目目前已经不再只是：
+当前 V0.3 已经解决“研究方案如何自然讨论并冻结”。
 
-```text
-输入一句话
-→ 打印 JSON
-→ 保存 JSON
-```
+但它仍然没有解决“真实数据怎么跑”。
 
-V0.2 开始形成：
+真正跨出 Planning Demo 的下一关键节点仍然是：
 
 ```text
-语义提取
-→ 候选方案
-→ 人工审核
-→ 审计日志
-→ 冻结研究计划
+Frozen Research Plan
+→ Data Binding
+→ Executable Analysis Spec
+→ 真实 Workflow
+→ Golden Test
 ```
-
-但真正跨出 Demo/MVP 的关键节点仍然是：
-
-```text
-真实数据绑定
-→ 生成可执行分析任务
-→ 自动 Workflow
-→ 真实 Logistic
-→ Result Registry
-→ 与人工结果一致
-```
-
-因此 V0.2 完成后不继续堆 CLI 功能，而应尽快进入执行链。
