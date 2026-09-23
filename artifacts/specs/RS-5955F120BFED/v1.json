@@ -1,0 +1,70 @@
+{
+  "spec_id": "RS-5955F120BFED",
+  "spec_version": 1,
+  "status": "FROZEN",
+  "content_hash": "f4996c16074f2e606756bd5baf8e010683ddf1ec0aa020222f0294f247867249",
+  "frozen_at": "2026-09-23T12:05:47.958774Z",
+  "research_spec": {
+    "schema_version": "0.1.0",
+    "source_question": "我想研究成年人中 Vitamin D 水平与高血压之间的关系，并调整年龄、性别和 BMI。",
+    "study_design": "cross_sectional",
+    "objective": "association",
+    "dataset": {
+      "name": "NHANES",
+      "version": null,
+      "local_path": null
+    },
+    "population": {
+      "description": "成年人",
+      "age_min": 20.0,
+      "age_max": null
+    },
+    "exposure": {
+      "name": "Vitamin D 水平",
+      "column": null,
+      "data_type": "continuous",
+      "unit": "ng/mL",
+      "analysis_form": "continuous"
+    },
+    "outcome": {
+      "name": "高血压",
+      "column": null,
+      "data_type": "binary",
+      "coding": null,
+      "definition": "本Demo中，hypertension变量取值为1定义为高血压，取值为0定义为无高血压；该定义仅用于平台流程测试，不代表正式科研中的临床判定标准。"
+    },
+    "covariates": [
+      {
+        "name": "年龄",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      },
+      {
+        "name": "性别",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      },
+      {
+        "name": "BMI",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      }
+    ],
+    "missing_data": {
+      "strategy": "complete_case_global"
+    },
+    "open_issues": [],
+    "review_status": "READY_FOR_DATA_BINDING",
+    "confirmation": {
+      "confirmed": true,
+      "confirmed_by": "demo_user",
+      "confirmed_at": "2026-09-23T12:05:47.958068Z"
+    }
+  }
+}

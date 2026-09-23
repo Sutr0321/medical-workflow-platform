@@ -1,0 +1,76 @@
+{
+  "spec_id": "RS-9F7249BE874D",
+  "spec_version": 1,
+  "status": "FROZEN",
+  "content_hash": "9fd40f6293e217dd26534df41193c57fcf4d5548ac55d57f17b008e722c9eedb",
+  "frozen_at": "2026-09-23T12:54:25.389815Z",
+  "research_spec": {
+    "schema_version": "0.1.0",
+    "source_question": "基于 NHANES 开展横断面研究，纳入20岁及以上成年人，研究血清尿酸水平与高血压之间的关联。血清尿酸作为连续变量并以连续形式进入模型，高血压作为二分类结局，调整年龄、性别和 BMI，采用多变量 Logistic 回归分析，并采用完整病例分析。",
+    "study_design": "cross_sectional",
+    "objective": "association",
+    "dataset": {
+      "name": "NHANES",
+      "version": null,
+      "local_path": null
+    },
+    "population": {
+      "description": "20岁及以上成年人",
+      "age_min": 20.0,
+      "age_max": null
+    },
+    "exposure": {
+      "name": "血清尿酸",
+      "column": null,
+      "data_type": "continuous",
+      "unit": "μmol/L",
+      "analysis_form": "continuous"
+    },
+    "outcome": {
+      "name": "高血压",
+      "column": null,
+      "data_type": "binary",
+      "coding": {
+        "negative_value": null,
+        "positive_value": null
+      },
+      "definition": "本Demo中，hypertension变量取值为1定义为高血压，取值为0定义为无高血压；该定义仅用于平台流程测试，不代表正式科研中的临床判定标准。"
+    },
+    "covariates": [
+      {
+        "name": "年龄",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      },
+      {
+        "name": "性别",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      },
+      {
+        "name": "BMI",
+        "column": null,
+        "data_type": null,
+        "unit": null,
+        "reference_value": null
+      }
+    ],
+    "missing_data": {
+      "strategy": "complete_case_global"
+    },
+    "analysis": {
+      "method": "logistic_regression"
+    },
+    "open_issues": [],
+    "review_status": "READY_FOR_DATA_BINDING",
+    "confirmation": {
+      "confirmed": true,
+      "confirmed_by": "demo_user",
+      "confirmed_at": "2026-09-23T12:54:25.389296Z"
+    }
+  }
+}
