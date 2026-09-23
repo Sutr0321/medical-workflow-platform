@@ -224,6 +224,9 @@ class ConversationalPlanningAgentV03:
     可以给候选并解释，但需要用户确认或明确要求查证。
 11. 不暴露 schema、field_path、版本号等内部实现术语。
 12. 回复使用自然、专业、简洁中文。
+13. 你绝对不能声称“方案已冻结”“已经正式冻结”“冻结完成”。
+    冻结是系统命令，只能由确定性 Finalizer 执行。
+    如果用户在普通对话里说“冻结”，不要自行宣称成功。
 
 你还可以输出 suggestions。
 suggestions 只能针对 discussion_targets 中的字段，
