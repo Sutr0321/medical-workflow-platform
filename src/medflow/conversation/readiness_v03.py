@@ -7,8 +7,8 @@ class ConversationalReadinessV03:
     """
     对话规划阶段的确定性完整性检查。
 
-    只回答“研究计划还缺什么”，
-    不判断当前平台能不能执行。
+    这里只判断 Research Plan 是否足够完整，
+    不判断当前平台是否具备执行能力。
     """
 
     REQUIRED_PATHS = (
@@ -32,14 +32,12 @@ class ConversationalReadinessV03:
     ) -> list[str]:
 
         data = spec.model_dump()
-
         missing: list[str] = []
 
         for path in (
             ConversationalReadinessV03
             .REQUIRED_PATHS
         ):
-
             value = (
                 ConversationalReadinessV03
                 ._get_value(
@@ -61,23 +59,50 @@ class ConversationalReadinessV03:
         return missing
 
     @staticmethod
+    def blocking_reasons(
+        spec: CandidateResearchSpecV01,
+    ) -> list[str]:
+        """
+        除字段缺失外，再检查方案内部逻辑冲突。
+        """
+
+        reasons = [
+            f"必填研究决策尚未完成：{path}"
+            for path in (
+                ConversationalReadinessV03
+                .missing_fields(spec)
+            )
+        ]
+
+        method = (
+            spec.analysis.method or ""
+        ).lower()
+
+        if (
+            "multivariable" in method
+            or "multivariate" in method
+            or "多变量" in method
+            or "多因素" in method
+        ):
+            if not spec.covariates:
+                reasons.append(
+                    "主分析已设为多变量/多因素模型，"
+                    "但协变量框架仍为空。"
+                )
+
+        return reasons
+
+    @staticmethod
     def discussion_targets(
         spec: CandidateResearchSpecV01,
         confirmed_fields: list[str],
     ) -> list[str]:
-        """
-        返回下一轮允许 AI 主动追问的字段。
-
-        核心规则：
-        已确认字段不再主动询问。
-        用户如果主动提出修改，仍然允许更新。
-        """
 
         confirmed = set(
             confirmed_fields
         )
 
-        return [
+        targets = [
             path
             for path in (
                 ConversationalReadinessV03
@@ -86,6 +111,34 @@ class ConversationalReadinessV03:
             if path not in confirmed
         ]
 
+        method = (
+            spec.analysis.method or ""
+        ).lower()
+
+        needs_covariates = (
+            (
+                "multivariable" in method
+                or "multivariate" in method
+                or "多变量" in method
+                or "多因素" in method
+            )
+            and not spec.covariates
+        )
+
+        if (
+            needs_covariates
+            and "covariates"
+            not in confirmed
+            and "covariates"
+            not in targets
+        ):
+            targets.insert(
+                0,
+                "covariates",
+            )
+
+        return targets
+
     @staticmethod
     def is_ready(
         spec: CandidateResearchSpecV01,
@@ -93,7 +146,7 @@ class ConversationalReadinessV03:
 
         return not (
             ConversationalReadinessV03
-            .missing_fields(spec)
+            .blocking_reasons(spec)
         )
 
     @staticmethod
