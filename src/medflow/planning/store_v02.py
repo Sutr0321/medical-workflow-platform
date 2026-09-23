@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from medflow.contracts.execution_spec import (
-    FrozenExecutionSpecV02,
-)
 from medflow.contracts.proposal import (
     CandidateProposalV02,
+)
+from medflow.contracts.research_plan import (
+    FrozenResearchPlanV02,
 )
 from medflow.contracts.review_log import (
     ReviewDecisionLogV02,
@@ -18,13 +18,17 @@ class ResearchPlanningStoreV02:
     每次正式冻结保存三份彼此分离的产物：
 
     proposal.json
-        人机讨论/候选层
+        候选讨论层
 
     review_log.json
         人工审核审计记录
 
-    execution_spec.json
-        后续 Rule / Workflow 唯一读取的执行语义
+    research_plan.json
+        已冻结的正式研究计划
+
+    注意：
+    research_plan.json 仍不能直接执行。
+    后续还需要 Data Binding。
     """
 
     def __init__(
@@ -40,14 +44,14 @@ class ResearchPlanningStoreV02:
         *,
         proposal: CandidateProposalV02,
         review_log: ReviewDecisionLogV02,
-        frozen_spec: FrozenExecutionSpecV02,
+        frozen_plan: FrozenResearchPlanV02,
     ) -> Path:
 
         version_dir = (
             self.root_dir
-            / frozen_spec.spec_id
+            / frozen_plan.plan_id
             / (
-                f"v{frozen_spec.spec_version}"
+                f"v{frozen_plan.plan_version}"
             )
         )
 
@@ -84,9 +88,9 @@ class ResearchPlanningStoreV02:
 
         (
             version_dir
-            / "execution_spec.json"
+            / "research_plan.json"
         ).write_text(
-            frozen_spec.model_dump_json(
+            frozen_plan.model_dump_json(
                 indent=2
             ),
             encoding="utf-8",
