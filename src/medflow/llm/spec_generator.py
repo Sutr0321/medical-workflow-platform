@@ -73,11 +73,14 @@ class ResearchSpecGenerator:
 8. 不要自行定义疾病或结局判定标准。
 
 9. study_design：
-只有用户明确说明是横断面研究时，
-才能填写：
+只有用户明确说明研究设计时才能填写。
+使用稳定的机器可读英文标识，例如：
 "cross_sectional"
+"cohort"
+"case_control"
+"randomized_trial"
 
-否则必须为 null。
+用户没有明确说明时必须为 null。
 
 10. objective：
 如果用户明确表达：
@@ -116,41 +119,41 @@ class ResearchSpecGenerator:
 
 13. outcome.data_type：
 
-当前系统只支持 binary。
-
-只有用户明确说明结局是二分类结局时，
-才能填写：
+只有用户明确说明结局类型时才填写。
+使用稳定机器可读标识，例如：
 "binary"
+"continuous"
+"time_to_event"
+"count"
 
 否则 null。
 
 14. missing_data.strategy：
 
-只有用户明确说明采用完整病例分析、
-complete case analysis
-或者同义表达时，
-才填写：
+只有用户明确说明缺失值处理策略时才填写。
 
-"complete_case_global"
+例如：
+完整病例分析 → "complete_case_global"
+多重插补 → "multiple_imputation"
 
-否则 null。
+如果用户没有明确说明，必须为 null。
+不要因为当前平台实现能力替用户选择。
 
 15. analysis.method：
 
-只有用户明确说明使用 Logistic 回归、
-Logistic regression、
-多变量 Logistic 回归、
-多因素 Logistic 回归等明确表达时，
+只有用户明确说明主分析方法时才填写。
 
-才填写：
-
-"logistic_regression"
+使用稳定机器可读标识，例如：
+Logistic 回归 → "logistic_regression"
+线性回归 → "linear_regression"
+Cox 回归 → "cox_regression"
+Survey-weighted Logistic → "survey_logistic_regression"
 
 如果用户没有明确说明具体分析方法，
 必须填写 null。
 
-绝对禁止因为结局变量是二分类变量，
-就自行推断 Logistic 回归。
+绝对禁止因为结局变量类型自行推断统计方法，
+也禁止因为平台当前实现能力替用户选择。
 
 16. covariates：
 
