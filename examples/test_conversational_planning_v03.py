@@ -49,12 +49,19 @@ from medflow.conversation.readiness_v03 import (
 from medflow.conversation.store_v03 import (
     ConversationPlanningStoreV03,
 )
+from medflow.execution.capability import (
+    ExecutionCapabilityCheckerV03,
+)
 from medflow.spec.candidate_validator import (
     CandidateSpecValidator,
 )
 
 
-def build_complete_candidate():
+def build_complete_candidate(
+    *,
+    missing_strategy: str = "complete_case_global",
+    analysis_method: str = "logistic_regression",
+):
 
     candidate = CandidateResearchSpecV01(
         source_question=(
@@ -73,15 +80,15 @@ def build_complete_candidate():
         exposure=CandidateExposure(
             name="25-羟基维生素D",
             data_type="continuous",
-            unit="待 Data Binding 核对",
+            unit="ng/mL",
             analysis_form="continuous",
         ),
         outcome=CandidateOutcome(
             name="高血压",
             data_type="binary",
             definition=(
-                "采用研究者最终确认的二分类高血压定义；"
-                "真实变量和派生规则在 Data Binding 阶段核对。"
+                "按研究者确认的现场平均血压阈值"
+                "和当前降压药使用状态构造二分类高血压结局。"
             ),
         ),
         covariates=[
@@ -96,10 +103,10 @@ def build_complete_candidate():
             ),
         ],
         missing_data=CandidateMissingData(
-            strategy="complete_case_global"
+            strategy=missing_strategy
         ),
         analysis=CandidateAnalysis(
-            method="logistic_regression"
+            method=analysis_method
         ),
     )
 
@@ -140,7 +147,77 @@ print(
 
 
 print()
-print("2. 人类可读方案预览")
+print("2. 已确认字段禁止重复成为讨论目标")
+
+partial_data = (
+    candidate.model_dump()
+)
+
+partial_data[
+    "outcome"
+][
+    "definition"
+] = None
+
+partial_data[
+    "missing_data"
+][
+    "strategy"
+] = None
+
+partial_data[
+    "analysis"
+][
+    "method"
+] = None
+
+partial = (
+    CandidateResearchSpecV01
+    .model_validate(
+        partial_data
+    )
+)
+
+partial.open_issues = (
+    CandidateSpecValidator
+    .validate(partial)
+)
+
+targets = (
+    ConversationalReadinessV03
+    .discussion_targets(
+        partial,
+        confirmed_fields=[
+            "study_design",
+            "dataset.name",
+            "population.age_min",
+            "exposure.name",
+            "exposure.data_type",
+            "exposure.analysis_form",
+            "outcome.name",
+            "outcome.data_type",
+        ],
+    )
+)
+
+assert (
+    "exposure.analysis_form"
+    not in targets
+)
+
+assert targets == [
+    "outcome.definition",
+    "missing_data.strategy",
+    "analysis.method",
+]
+
+print(
+    "PASS：已确认的暴露分析形式不会被再次主动询问"
+)
+
+
+print()
+print("3. 人类可读方案预览")
 
 confirmed_fields = [
     "study_design",
@@ -168,15 +245,14 @@ preview = (
 
 assert "研究方案实时预览" in preview
 assert "25-羟基维生素D" in preview
-assert "Logistic" not in preview or "logistic_regression" in preview
 
 print(
-    "PASS：可以从结构化状态生成前端式方案预览"
+    "PASS：可以从结构化状态生成方案预览"
 )
 
 
 print()
-print("3. 构造对话会话")
+print("4. 构造对话会话")
 
 now = datetime.now(
     timezone.utc
@@ -196,15 +272,7 @@ session = PlanningSessionV03(
         PlanningMessageV03(
             role="assistant",
             content=(
-                "可以，我们逐步把研究设计讨论清楚。"
-            ),
-            created_at=now,
-        ),
-        PlanningMessageV03(
-            role="user",
-            content=(
-                "用NHANES 2017-2018，20岁以上，"
-                "横断面，主分析用Logistic。"
+                "可以，我们逐步把研究方案讨论清楚。"
             ),
             created_at=now,
         ),
@@ -215,21 +283,13 @@ session = PlanningSessionV03(
         PlanningDecisionV03(
             field_path="dataset.name",
             value="NHANES",
-            evidence=(
-                "用NHANES 2017-2018"
-            ),
+            evidence="使用 NHANES",
             decided_at=now,
         ),
         PlanningDecisionV03(
             field_path="population.age_min",
             value=20,
             evidence="20岁以上",
-            decided_at=now,
-        ),
-        PlanningDecisionV03(
-            field_path="analysis.method",
-            value="logistic_regression",
-            evidence="主分析用Logistic",
             decided_at=now,
         ),
     ],
@@ -244,7 +304,7 @@ print(
 
 
 print()
-print("4. 确定性冻结")
+print("5. 确定性冻结")
 
 (
     frozen_session,
@@ -269,14 +329,6 @@ assert (
 )
 
 assert (
-    frozen_plan
-    .research_plan
-    .analysis
-    .method
-    == "logistic_regression"
-)
-
-assert (
     review_log.status
     == "COMPLETE"
 )
@@ -287,7 +339,74 @@ print(
 
 
 print()
-print("5. 保存完整审计产物")
+print("6. Research Plan 与当前执行能力分离")
+
+unsupported_candidate = (
+    build_complete_candidate(
+        missing_strategy=(
+            "multiple_imputation"
+        )
+    )
+)
+
+unsupported_session = (
+    session.model_copy(
+        update={
+            "status": "READY_TO_FREEZE",
+            "current_candidate": (
+                unsupported_candidate
+            ),
+        }
+    )
+)
+
+(
+    _,
+    _,
+    unsupported_frozen,
+) = (
+    ConversationalPlanningFinalizerV03
+    .finalize(
+        session=unsupported_session,
+        reviewed_by="test_user",
+    )
+)
+
+capability = (
+    ExecutionCapabilityCheckerV03
+    .check(
+        unsupported_frozen
+        .research_plan
+    )
+)
+
+assert (
+    unsupported_frozen
+    .research_plan
+    .missing_data
+    .strategy
+    == "multiple_imputation"
+)
+
+assert capability.supported is False
+
+assert any(
+    "multiple_imputation"
+    in reason
+    for reason in (
+        capability
+        .unsupported_reasons
+    )
+)
+
+print(
+    "PASS：科研方案可以冻结多重插补，"
+    "执行能力检查再单独报告当前尚未实现"
+)
+
+
+print()
+print("7. 保存完整审计产物")
 
 with tempfile.TemporaryDirectory() as tmp:
 
@@ -331,12 +450,14 @@ print(
 
 
 print()
-print("6. 不完整方案禁止冻结")
+print("8. 不完整方案禁止冻结")
 
 incomplete = build_complete_candidate()
+
 incomplete_data = (
     incomplete.model_dump()
 )
+
 incomplete_data[
     "analysis"
 ][
