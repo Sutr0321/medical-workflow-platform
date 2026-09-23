@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -31,18 +31,15 @@ class CandidateExposure(BaseModel):
     name: str | None = None
     column: str | None = None
 
-    data_type: Literal[
-        "continuous",
-        "categorical",
-        "binary",
-    ] | None = None
+    # Research Planning 层允许记录研究者实际选择的变量类型。
+    # 是否能被当前执行引擎支持，由后续 Capability Check 判断。
+    data_type: str | None = None
 
+    # 当前阶段只是“计划报告单位”，
+    # 真实数据源单位必须在 Data Binding 阶段核对。
     unit: str | None = None
 
-    analysis_form: Literal[
-        "continuous",
-        "categorical",
-    ] | None = None
+    analysis_form: str | None = None
 
 
 # ==========================================
@@ -58,9 +55,10 @@ class CandidateOutcome(BaseModel):
     name: str | None = None
     column: str | None = None
 
-    data_type: Literal[
-        "binary",
-    ] | None = None
+    # 不再把 Research Plan 限死为 binary。
+    # binary / continuous / time_to_event / count 等
+    # 都可以在规划层记录。
+    data_type: str | None = None
 
     coding: CandidateBinaryCoding | None = Field(
         default_factory=CandidateBinaryCoding
@@ -78,11 +76,7 @@ class CandidateCovariate(BaseModel):
 
     column: str | None = None
 
-    data_type: Literal[
-        "continuous",
-        "categorical",
-        "binary",
-    ] | None = None
+    data_type: str | None = None
 
     unit: str | None = None
 
@@ -94,9 +88,17 @@ class CandidateCovariate(BaseModel):
 # ==========================================
 
 class CandidateMissingData(BaseModel):
-    strategy: Literal[
-        "complete_case_global",
-    ] | None = None
+    """
+    Research Planning 层记录科研人员真正选择的缺失值策略。
+
+    例如：
+    complete_case_global
+    multiple_imputation
+
+    当前执行引擎是否支持，不在这里限制。
+    """
+
+    strategy: str | None = None
 
 
 # ==========================================
@@ -105,17 +107,15 @@ class CandidateMissingData(BaseModel):
 
 class CandidateAnalysis(BaseModel):
     """
-    当前 V0.1 只支持 Logistic Regression。
+    Research Planning 层记录科研人员确认的主分析方法。
 
-    注意：
-    如果用户没有明确提出统计方法，
-    LLM 不允许自行推断，应保持 None，
-    后续由科研人员人工确认。
+    这里不再因为当前引擎只实现了某一种算法，
+    就把 Research Plan 强制限制在该方法。
+
+    是否可自动执行，由后续 Capability Check / Registry 判断。
     """
 
-    method: Literal[
-        "logistic_regression",
-    ] | None = None
+    method: str | None = None
 
 
 # ==========================================
@@ -126,12 +126,7 @@ class OpenIssue(BaseModel):
     issue_id: str
     field_path: str
 
-    issue_type: Literal[
-        "missing",
-        "ambiguous",
-        "unsupported",
-        "conflict",
-    ]
+    issue_type: str
 
     blocking: bool = True
 
@@ -144,19 +139,15 @@ class OpenIssue(BaseModel):
 
 class CandidateResearchSpecV01(BaseModel):
 
-    schema_version: Literal[
-        "0.1.0"
-    ] = "0.1.0"
+    schema_version: str = "0.1.0"
 
     source_question: str
 
-    study_design: Literal[
-        "cross_sectional"
-    ] | None = None
+    # Research Planning 层允许记录真实研究设计，
+    # 不再把它与当前执行引擎能力绑定。
+    study_design: str | None = None
 
-    objective: Literal[
-        "association"
-    ] | None = None
+    objective: str | None = None
 
     dataset: CandidateDataset = Field(
         default_factory=CandidateDataset
