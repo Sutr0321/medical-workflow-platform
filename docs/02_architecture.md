@@ -15,9 +15,11 @@ Generic Review Engine
         ↓
 Review Decision Log
         ↓
-Frozen Execution Research Spec
+Frozen Research Plan
         ↓
 Data Binding
+        ↓
+Executable Analysis Spec
         ↓
 Rule Engine
         ↓
@@ -69,9 +71,9 @@ V0.2 进一步拆开三类本质不同的信息。
 - 决策动作
 - 时间
 
-### Execution Research Spec
+### Research Plan
 
-给机器执行。
+冻结正式研究计划，但还不能直接执行。
 
 只允许明确、标准化、无歧义的语义值。
 
@@ -133,7 +135,7 @@ ReviewDecisionLogV02
 
 ## 6. Execution Spec
 
-`ExecutionResearchSpecV02` 是后续 Rule / YAML / Workflow 使用的正式语义输入。
+`ResearchPlanV02` 是经人工审核后冻结的正式研究计划。它不包含真实数据列、实际单位、编码或派生表达式，因此不能直接交给算法执行。
 
 当前包含：
 
@@ -184,7 +186,7 @@ review_log.json
 execution_spec.json
 ```
 
-后续系统只读取 `execution_spec.json`。
+后续系统先读取 `research_plan.json`，再通过 Data Binding 绑定真实变量、单位、编码与派生规则，之后才生成 Executable Analysis Spec。
 
 Proposal 和 Review Log 用于：
 
