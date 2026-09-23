@@ -28,9 +28,17 @@ class PlanningSessionServiceV03:
     """
     对话式 Research Planning 会话服务。
 
-    用户看到的是聊天；
-    后台持续维护 Candidate Research Spec。
+    核心顺序：
+
+    用户消息
+    → 先解释并落结构化状态
+    → 重新计算未解决字段
+    → 再生成 AI 回复
+
+    因此 AI 的下一句话看到的一定是“更新后的状态”。
     """
+
+    MAX_ACTIVE_TARGETS = 2
 
     def __init__(self):
         self.initial_extractor = (
@@ -103,16 +111,16 @@ class PlanningSessionServiceV03:
             updated_at=now,
         )
 
-        return self.continue_dialogue(
+        return self._compose_after_state_update(
             session=session,
-            user_message=None,
+            latest_user_message=topic,
         )
 
     def continue_dialogue(
         self,
         *,
         session: PlanningSessionV03,
-        user_message: str | None,
+        user_message: str,
     ) -> PlanningSessionV03:
 
         if session.status == "FROZEN":
@@ -121,44 +129,26 @@ class PlanningSessionServiceV03:
                 "不能继续修改。"
             )
 
-        data = session.model_dump()
+        user_message = user_message.strip()
+
+        if not user_message:
+            raise ValueError(
+                "用户消息不能为空。"
+            )
 
         now = datetime.now(
             timezone.utc
         )
 
-        if user_message is not None:
+        data = session.model_dump()
 
-            user_message = (
-                user_message.strip()
-            )
-
-            if not user_message:
-                raise ValueError(
-                    "用户消息不能为空。"
-                )
-
-            data["messages"].append(
-                PlanningMessageV03(
-                    role="user",
-                    content=user_message,
-                    created_at=now,
-                ).model_dump()
-            )
-
-        latest_user_message = (
-            user_message
-            if user_message is not None
-            else session.messages[-1].content
+        data["messages"].append(
+            PlanningMessageV03(
+                role="user",
+                content=user_message,
+                created_at=now,
+            ).model_dump()
         )
-
-        history = [
-            {
-                "role": item["role"],
-                "content": item["content"],
-            }
-            for item in data["messages"]
-        ]
 
         candidate = (
             CandidateResearchSpecV01
@@ -169,25 +159,34 @@ class PlanningSessionServiceV03:
             )
         )
 
-        missing = (
-            ConversationalReadinessV03
-            .missing_fields(candidate)
-        )
+        history = [
+            {
+                "role": item["role"],
+                "content": item["content"],
+            }
+            for item in data["messages"]
+        ]
 
-        turn = self.agent.respond(
-            user_message=latest_user_message,
-            conversation_history=history,
-            current_state=(
-                candidate.model_dump(
-                    mode="json"
-                )
-            ),
-            missing_fields=missing,
-            pending_suggestions=(
-                data[
-                    "pending_suggestions"
-                ]
-            ),
+        # ----------------------------------
+        # Phase 1：只理解用户本轮明确决策
+        # ----------------------------------
+
+        updates = (
+            self.agent
+            .safe_interpret_updates(
+                user_message=user_message,
+                conversation_history=history,
+                current_state=(
+                    candidate.model_dump(
+                        mode="json"
+                    )
+                ),
+                pending_suggestions=(
+                    data[
+                        "pending_suggestions"
+                    ]
+                ),
+            )
         )
 
         answers: dict[str, Any] = {}
@@ -204,9 +203,7 @@ class PlanningSessionServiceV03:
             ]
         )
 
-        for update in (
-            turn.explicit_updates
-        ):
+        for update in updates:
 
             normalized = (
                 self._normalize_value(
@@ -263,6 +260,92 @@ class PlanningSessionServiceV03:
         data[
             "decisions"
         ] = decisions
+
+        data["updated_at"] = now
+
+        updated_session = (
+            PlanningSessionV03
+            .model_validate(data)
+        )
+
+        # ----------------------------------
+        # Phase 2：用更新后的状态生成下一句话
+        # ----------------------------------
+
+        return self._compose_after_state_update(
+            session=updated_session,
+            latest_user_message=user_message,
+        )
+
+    def _compose_after_state_update(
+        self,
+        *,
+        session: PlanningSessionV03,
+        latest_user_message: str,
+    ) -> PlanningSessionV03:
+
+        data = session.model_dump()
+
+        candidate = (
+            CandidateResearchSpecV01
+            .model_validate(
+                data[
+                    "current_candidate"
+                ]
+            )
+        )
+
+        targets = (
+            ConversationalReadinessV03
+            .discussion_targets(
+                candidate,
+                data[
+                    "confirmed_fields"
+                ],
+            )
+        )
+
+        # 每轮最多推进两个真正未解决的问题。
+        active_targets = (
+            targets[
+                :self.MAX_ACTIVE_TARGETS
+            ]
+        )
+
+        history = [
+            {
+                "role": item["role"],
+                "content": item["content"],
+            }
+            for item in data["messages"]
+        ]
+
+        turn = (
+            self.agent
+            .safe_compose_reply(
+                latest_user_message=(
+                    latest_user_message
+                ),
+                conversation_history=history,
+                current_state=(
+                    candidate.model_dump(
+                        mode="json"
+                    )
+                ),
+                confirmed_fields=(
+                    data[
+                        "confirmed_fields"
+                    ]
+                ),
+                discussion_targets=(
+                    active_targets
+                ),
+            )
+        )
+
+        now = datetime.now(
+            timezone.utc
+        )
 
         data[
             "pending_suggestions"
