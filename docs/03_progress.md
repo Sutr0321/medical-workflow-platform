@@ -38,6 +38,9 @@ feat/conversational-planning-v0.3
 | Conversational Planning Agent | ✅ |
 | Session Service | ✅ |
 | Deterministic Readiness | ✅ |
+| Confirmed-field no-repeat rule | ✅ |
+| Two-stage turn processing | ✅ |
+| Execution Capability Checker | ✅ |
 | Research Plan Preview | ✅ |
 | Conversational Finalizer | ✅ |
 | Transcript / Review Log / Research Plan Store | ✅ |
@@ -74,7 +77,10 @@ python examples\run_conversational_planning_v03.py
 
 ## 当前关键边界
 
-当前 V0.3 已经解决“研究方案如何自然讨论并冻结”。
+当前 V0.3 已经解决“研究方案如何自然讨论并冻结”，并进一步修复了两类关键问题：
+
+- 用户刚确认的字段不会再次主动询问
+- 当前平台实现能力不会反向绑架科研方案选择
 
 但它仍然没有解决“真实数据怎么跑”。
 
