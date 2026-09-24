@@ -78,6 +78,13 @@ class ResearchSpecGenerator:
 
 8. 不要自行定义疾病或结局判定标准。
 
+8.1 dataset.version：
+如果用户明确指定调查周期或数据版本，必须提取到 dataset.version。
+例如：
+“NHANES 2013-2014、2015-2016、2017-2018”
+→ dataset.version = "2013-2014, 2015-2016, 2017-2018"
+没有明确周期时保持 null。
+
 9. study_design：
 只有用户明确说明研究设计时才能填写。
 使用稳定的机器可读英文标识，例如：
@@ -138,7 +145,14 @@ class ResearchSpecGenerator:
 “高血压患病状态的关联”
 “抑郁症状的关系”
 
-13.1 outcome.data_type：
+13.1 outcome.sensitivity_definitions：
+如果用户明确提出替代结局定义或敏感性分析口径，
+必须与主 outcome.definition 分开保存。
+例如：
+“140/90 mmHg 标准作为敏感性分析”
+→ sensitivity_definitions = ["140/90 mmHg 高血压定义"]
+
+13.2 outcome.data_type：
 
 只有用户明确说明结局类型时才填写。
 使用稳定机器可读标识，例如：
