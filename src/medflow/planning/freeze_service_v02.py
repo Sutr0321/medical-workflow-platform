@@ -82,3 +82,7 @@ class ResearchPlanFreezeServiceV03:
                 "utf-8"
             )
         ).hexdigest()
+
+
+# 兼容历史导入名称。
+ResearchPlanFreezeServiceV02 = ResearchPlanFreezeServiceV03
