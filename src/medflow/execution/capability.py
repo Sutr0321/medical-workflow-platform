@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from medflow.contracts.research_plan import (
-    ResearchPlanV02,
+    ResearchPlanV03,
 )
 
 
@@ -34,7 +34,7 @@ class ExecutionCapabilityCheckerV03:
 
     @staticmethod
     def check(
-        plan: ResearchPlanV02,
+        plan: ResearchPlanV03,
     ) -> ExecutionCapabilityReportV03:
 
         reasons: list[str] = []
@@ -67,7 +67,7 @@ class ExecutionCapabilityCheckerV03:
             )
 
         if (
-            plan.analysis.method
+            plan.analysis.primary_model
             != "logistic_regression"
         ):
             reasons.append(
