@@ -48,7 +48,7 @@ class PlanningStateUpdateV03(BaseModel):
 
 class PlanningDecisionV03(BaseModel):
     """
-    已经由用户明确表达或明确接受的决策记录。
+    已经由用户明确表达/接受，或由系统进行不改变研究意图的确定性规范化记录。
     """
 
     field_path: str
@@ -58,7 +58,8 @@ class PlanningDecisionV03(BaseModel):
     evidence: str
 
     source: Literal[
-        "USER_EXPLICIT"
+        "USER_EXPLICIT",
+        "SYSTEM_NORMALIZATION",
     ] = "USER_EXPLICIT"
 
     decided_at: datetime
