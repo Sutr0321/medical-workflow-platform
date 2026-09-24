@@ -72,7 +72,7 @@ class ExecutionCapabilityCheckerV03:
         ):
             reasons.append(
                 "当前执行引擎尚未实现该主分析方法："
-                f"{plan.analysis.method}"
+                f"{plan.analysis.primary_model}"
             )
 
         if (
