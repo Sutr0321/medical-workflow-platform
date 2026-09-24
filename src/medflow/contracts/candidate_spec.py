@@ -9,7 +9,13 @@ from pydantic import BaseModel, Field
 
 class CandidateDataset(BaseModel):
     name: str | None = None
+
+    # 研究者明确指定的调查周期 / 数据版本。
+    # 对 NHANES 可保存类似：
+    # "2013-2014, 2015-2016, 2017-2018"
     version: str | None = None
+
+    # 真实本地路径仍属于 Data Binding。
     local_path: str | None = None
 
 
@@ -31,12 +37,10 @@ class CandidateExposure(BaseModel):
     name: str | None = None
     column: str | None = None
 
-    # Research Planning 层允许记录研究者实际选择的变量类型。
-    # 是否能被当前执行引擎支持，由后续 Capability Check 判断。
     data_type: str | None = None
 
-    # 当前阶段只是“计划报告单位”，
-    # 真实数据源单位必须在 Data Binding 阶段核对。
+    # 当前阶段只是计划报告单位，
+    # 真实源单位必须在 Data Binding 阶段核对。
     unit: str | None = None
 
     analysis_form: str | None = None
@@ -55,16 +59,21 @@ class CandidateOutcome(BaseModel):
     name: str | None = None
     column: str | None = None
 
-    # 不再把 Research Plan 限死为 binary。
-    # binary / continuous / time_to_event / count 等
-    # 都可以在规划层记录。
     data_type: str | None = None
 
     coding: CandidateBinaryCoding | None = Field(
         default_factory=CandidateBinaryCoding
     )
 
+    # 主结局定义。
     definition: str | None = None
+
+    # 与主结局定义分离保存的替代定义 / 敏感性分析定义。
+    # 例如：
+    # ["140/90 mmHg 标准"]
+    sensitivity_definitions: list[str] = Field(
+        default_factory=list
+    )
 
 
 # ==========================================
@@ -89,16 +98,28 @@ class CandidateCovariate(BaseModel):
 
 class CandidateMissingData(BaseModel):
     """
-    Research Planning 层记录科研人员真正选择的缺失值策略。
+    Research Planning 层的缺失值计划。
 
-    例如：
-    complete_case_global
-    multiple_imputation
-
-    当前执行引擎是否支持，不在这里限制。
+    strategy 保留一个简洁的人类可读总策略，
+    其余字段把“固定策略”和“数据依赖条件策略”拆开，
+    避免把整段科研规则都塞进一个字符串。
     """
 
     strategy: str | None = None
+
+    # fixed / data_dependent
+    mode: str | None = None
+
+    # 决策前需要评估什么。
+    assessment: list[str] = Field(
+        default_factory=list
+    )
+
+    # 条件式决策规则。
+    decision_rule: str | None = None
+
+    # 敏感性分析原则。
+    sensitivity_plan: str | None = None
 
 
 # ==========================================
@@ -107,15 +128,33 @@ class CandidateMissingData(BaseModel):
 
 class CandidateAnalysis(BaseModel):
     """
-    Research Planning 层记录科研人员确认的主分析方法。
+    Research Planning 层的分析计划。
 
-    这里不再因为当前引擎只实现了某一种算法，
-    就把 Research Plan 强制限制在该方法。
-
-    是否可自动执行，由后续 Capability Check / Registry 判断。
+    method 仍保留用于兼容现有执行能力检查，
+    但不再让 method 一个字符串承担整份统计方案。
     """
 
+    # 主模型 / 主分析方法。
     method: str | None = None
+
+    # 主要效应量，例如 OR / PR / beta。
+    effect_measure: str | None = None
+
+    # 例如 0.95。
+    ci_level: float | None = None
+
+    # 是否明确要求复杂抽样 / survey design。
+    survey_design_required: bool | None = None
+
+    # 次要分析，例如 RCS。
+    secondary_analyses: list[str] = Field(
+        default_factory=list
+    )
+
+    # 敏感性分析，例如 robust Poisson PR。
+    sensitivity_analyses: list[str] = Field(
+        default_factory=list
+    )
 
 
 # ==========================================
@@ -139,12 +178,10 @@ class OpenIssue(BaseModel):
 
 class CandidateResearchSpecV01(BaseModel):
 
-    schema_version: str = "0.1.0"
+    schema_version: str = "0.1.1"
 
     source_question: str
 
-    # Research Planning 层允许记录真实研究设计，
-    # 不再把它与当前执行引擎能力绑定。
     study_design: str | None = None
 
     objective: str | None = None
