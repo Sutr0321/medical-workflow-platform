@@ -46,6 +46,9 @@ from medflow.conversation.finalizer import (
 from medflow.conversation.preview import (
     ResearchPlanPreviewV03,
 )
+from medflow.conversation.session_service import (
+    PlanningSessionServiceV03,
+)
 from medflow.conversation.readiness_v03 import (
     ConversationalReadinessV03,
 )
@@ -327,8 +330,14 @@ assert (
     == "FREEZE"
 )
 
+assert (
+    PlanningCommandRouterV03
+    .route("/send")
+    == "SEND"
+)
+
 print(
-    "PASS：冻结类命令不会再进入普通 LLM 对话"
+    "PASS：冻结类命令与 /send 都不会再进入普通 LLM 对话"
 )
 
 
@@ -386,6 +395,45 @@ assert any(
 
 print(
     "PASS：多变量模型 + 空协变量不会再 READY_TO_FREEZE"
+)
+
+
+print()
+print("2.7 NHANES 周期追问与完成提示使用确定性回复")
+
+cycle_turn = (
+    PlanningSessionServiceV03
+    ._deterministic_turn_if_applicable(
+        session_status="DISCUSSING",
+        active_targets=[
+            "dataset.version"
+        ],
+    )
+)
+
+assert cycle_turn is not None
+assert "NHANES 调查周期" in (
+    cycle_turn.assistant_message
+)
+assert "权重除以" not in (
+    cycle_turn.assistant_message
+)
+
+ready_turn = (
+    PlanningSessionServiceV03
+    ._deterministic_turn_if_applicable(
+        session_status="DISCUSSING",
+        active_targets=[],
+    )
+)
+
+assert ready_turn is not None
+assert "核心字段已经完整" in (
+    ready_turn.assistant_message
+)
+
+print(
+    "PASS：周期追问与首次 READY 提示不再依赖 LLM 自由发挥"
 )
 
 
