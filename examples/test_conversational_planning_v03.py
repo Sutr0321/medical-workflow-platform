@@ -93,6 +93,9 @@ def build_complete_candidate(
                 "按研究者确认的现场平均血压阈值"
                 "和当前降压药使用状态构造二分类高血压结局。"
             ),
+            sensitivity_definitions=[
+                "替代高血压阈值定义",
+            ],
         ),
         covariates=[
             CandidateCovariate(
@@ -106,10 +109,38 @@ def build_complete_candidate(
             ),
         ],
         missing_data=CandidateMissingData(
-            strategy=missing_strategy
+            strategy=missing_strategy,
+            mode=(
+                "fixed"
+                if missing_strategy
+                in {
+                    "complete_case_global",
+                    "multiple_imputation",
+                }
+                else "data_dependent"
+            ),
+            assessment=[
+                "缺失比例",
+                "缺失模式",
+            ],
+            decision_rule=(
+                "根据数据质量评估决定主策略"
+            ),
+            sensitivity_plan=(
+                "比较不同缺失值处理结果"
+            ),
         ),
         analysis=CandidateAnalysis(
-            method=analysis_method
+            method=analysis_method,
+            effect_measure="OR",
+            ci_level=0.95,
+            survey_design_required=True,
+            secondary_analyses=[
+                "restricted_cubic_spline",
+            ],
+            sensitivity_analyses=[
+                "robust_poisson_pr",
+            ],
         ),
     )
 
@@ -418,8 +449,76 @@ assert (
     == "COMPLETE"
 )
 
+assert (
+    frozen_plan
+    .research_plan
+    .analysis
+    .primary_model
+    == "logistic_regression"
+)
+
+assert (
+    frozen_plan
+    .research_plan
+    .analysis
+    .effect_measure
+    == "OR"
+)
+
+assert (
+    frozen_plan
+    .research_plan
+    .analysis
+    .ci_level
+    == 0.95
+)
+
+assert (
+    frozen_plan
+    .research_plan
+    .analysis
+    .survey_design_required
+    is True
+)
+
+assert (
+    "restricted_cubic_spline"
+    in frozen_plan
+    .research_plan
+    .analysis
+    .secondary_analyses
+)
+
+assert (
+    "robust_poisson_pr"
+    in frozen_plan
+    .research_plan
+    .analysis
+    .sensitivity_analyses
+)
+
+assert (
+    "替代高血压阈值定义"
+    in frozen_plan
+    .research_plan
+    .outcome
+    .sensitivity_definitions
+)
+
+assert (
+    frozen_plan
+    .research_plan
+    .missing_data
+    .assessment
+    == [
+        "缺失比例",
+        "缺失模式",
+    ]
+)
+
 print(
-    "PASS：对话完成后可确定性生成 Frozen Research Plan"
+    "PASS：Rich Research Plan 冻结时不会丢失"
+    "效应量、CI、复杂抽样、次要/敏感性分析和缺失策略细节"
 )
 
 
