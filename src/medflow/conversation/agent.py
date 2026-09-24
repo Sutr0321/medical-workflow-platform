@@ -98,9 +98,11 @@ class ConversationalPlanningAgentV03:
 8. 不自行选择统计方法或缺失值策略。
 9. covariates 必须输出字符串数组。
 10. exposure.unit 只是计划报告单位，不是真实源单位。
-11. outcome.definition 只有用户已经把研究定义说清楚时才更新。
+11. outcome.name 只记录结局本身，不包含“的关联”“的关系”等研究目的措辞。
+    例如“高血压患病状态的关联”应记录为“高血压患病状态”。
+12. outcome.definition 只有用户已经把研究定义说清楚时才更新。
     如果仅确认了“组合定义”但阈值/组合规则尚不完整，不更新完整 definition。
-12. 不生成自然语言回复，不提出下一步问题。
+13. 不生成自然语言回复，不提出下一步问题。
 
 只返回 JSON：
 {
