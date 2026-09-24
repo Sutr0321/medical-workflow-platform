@@ -250,6 +250,63 @@ print(
 )
 
 print()
+print("2.4 NHANES 周期缺失时禁止冻结")
+
+missing_cycle = build_complete_candidate()
+
+missing_cycle_data = (
+    missing_cycle.model_dump()
+)
+
+missing_cycle_data[
+    "dataset"
+][
+    "version"
+] = None
+
+missing_cycle = (
+    CandidateResearchSpecV01
+    .model_validate(
+        missing_cycle_data
+    )
+)
+
+missing_cycle.open_issues = (
+    CandidateSpecValidator
+    .validate(missing_cycle)
+)
+
+assert (
+    ConversationalReadinessV03
+    .is_ready(missing_cycle)
+    is False
+)
+
+assert (
+    "dataset.version"
+    in (
+        ConversationalReadinessV03
+        .missing_fields(
+            missing_cycle
+        )
+    )
+)
+
+assert any(
+    issue.field_path
+    == "dataset.version"
+    and issue.blocking
+    for issue in (
+        missing_cycle.open_issues
+    )
+)
+
+print(
+    "PASS：NHANES 调查周期未确定时不能 READY_TO_FREEZE"
+)
+
+
+print()
 print("2.5 冻结命令必须由系统路由")
 
 assert (
