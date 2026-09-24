@@ -42,9 +42,19 @@ class ConversationalPlanningAgentV03:
         "outcome.name",
         "outcome.data_type",
         "outcome.definition",
+        "outcome.sensitivity_definitions",
         "covariates",
         "missing_data.strategy",
+        "missing_data.mode",
+        "missing_data.assessment",
+        "missing_data.decision_rule",
+        "missing_data.sensitivity_plan",
         "analysis.method",
+        "analysis.effect_measure",
+        "analysis.ci_level",
+        "analysis.survey_design_required",
+        "analysis.secondary_analyses",
+        "analysis.sensitivity_analyses",
     }
 
     def __init__(
@@ -100,9 +110,15 @@ class ConversationalPlanningAgentV03:
 10. exposure.unit 只是计划报告单位，不是真实源单位。
 11. outcome.name 只记录结局本身，不包含“的关联”“的关系”等研究目的措辞。
     例如“高血压患病状态的关联”应记录为“高血压患病状态”。
-12. outcome.definition 只有用户已经把研究定义说清楚时才更新。
+12. outcome.definition 只有用户已经把主结局定义说清楚时才更新。
     如果仅确认了“组合定义”但阈值/组合规则尚不完整，不更新完整 definition。
-13. 不生成自然语言回复，不提出下一步问题。
+13. 如果用户明确提出替代结局定义用于敏感性分析，
+    写入 outcome.sensitivity_definitions，不要混入主 definition。
+14. 如果用户明确提出评估驱动的缺失值策略，
+    可以同时更新 missing_data.strategy / mode / assessment / decision_rule / sensitivity_plan。
+15. 如果用户明确提出复杂抽样、效应量、CI、RCS、补充模型或敏感性分析，
+    分别写入 analysis 对应字段，不要全部压进 analysis.method。
+16. 不生成自然语言回复，不提出下一步问题。
 
 只返回 JSON：
 {
