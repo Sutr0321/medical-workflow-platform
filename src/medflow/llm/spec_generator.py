@@ -149,33 +149,40 @@ class ResearchSpecGenerator:
 
 否则 null。
 
-14. missing_data.strategy：
+14. missing_data：
 
 只有用户明确说明缺失值处理策略时才填写。
 
-如果用户明确给的是固定策略，可以使用稳定标识，例如：
-完整病例分析 → "complete_case_global"
-多重插补 → "multiple_imputation"
+如果用户明确给的是固定策略：
+- strategy 填稳定标识，例如 complete_case_global / multiple_imputation
+- mode = "fixed"
 
-如果用户明确给的是“评估驱动/条件式”策略，
-不要强行改成固定策略。
-应把用户已经明确的条件规则压缩成简洁、忠实的字符串保存。
+如果用户明确给的是“评估驱动/条件式”策略：
+- strategy 填简洁的人类可读总策略，例如 "评估驱动条件策略"
+- mode = "data_dependent"
+- assessment 提取用户明确说要评估的内容
+- decision_rule 提取用户明确的条件分流规则
+- sensitivity_plan 提取用户明确的敏感性分析原则
 
-如果用户没有明确说明，必须为 null。
+如果用户没有明确说明，对应字段保持 null 或空数组。
 不要因为当前平台实现能力替用户选择。
 
-15. analysis.method：
+15. analysis：
 
-只有用户明确说明主分析方法时才填写。
+只有用户明确说明统计分析计划时才填写。
 
-使用稳定机器可读标识，例如：
+analysis.method 只记录主模型，使用稳定机器可读标识，例如：
 Logistic 回归 → "logistic_regression"
 线性回归 → "linear_regression"
 Cox 回归 → "cox_regression"
 Survey-weighted Logistic → "survey_logistic_regression"
 
-如果用户没有明确说明具体分析方法，
-必须填写 null。
+如果用户明确说明：
+- OR / PR / beta 等，写入 effect_measure
+- 95% CI，写入 ci_level = 0.95
+- 复杂抽样 / survey design，写入 survey_design_required = true
+- RCS 等补充分析，写入 secondary_analyses
+- 稳健方差 Poisson、替代模型等敏感性分析，写入 sensitivity_analyses
 
 绝对禁止因为结局变量类型自行推断统计方法，
 也禁止因为平台当前实现能力替用户选择。
@@ -208,7 +215,7 @@ open_issues 后续由固定程序重新生成，
 JSON 必须符合以下结构：
 
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.1.1",
   "source_question": "原始研究问题",
   "study_design": null,
   "objective": null,
@@ -241,17 +248,27 @@ JSON 必须符合以下结构：
       "negative_value": null,
       "positive_value": null
     },
-    "definition": null
+    "definition": null,
+    "sensitivity_definitions": []
   },
 
   "covariates": [],
 
   "missing_data": {
-    "strategy": null
+    "strategy": null,
+    "mode": null,
+    "assessment": [],
+    "decision_rule": null,
+    "sensitivity_plan": null
   },
 
   "analysis": {
-    "method": null
+    "method": null,
+    "effect_measure": null,
+    "ci_level": null,
+    "survey_design_required": null,
+    "secondary_analyses": [],
+    "sensitivity_analyses": []
   },
 
   "open_issues": []
