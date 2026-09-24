@@ -155,3 +155,20 @@ class FrozenResearchPlanV03(BaseModel):
     reviewed_by: str
 
     research_plan: ResearchPlanV03
+
+
+# ==========================================
+# Backward compatibility aliases
+# ==========================================
+# 旧 V0.2 模块仍可能导入这些名称。
+# 它们现在统一指向 Rich Research Plan V0.3，
+# 避免升级 Schema 时破坏历史测试与模块导入。
+
+ResearchDatasetPlanV02 = ResearchDatasetPlanV03
+ResearchPopulationPlanV02 = ResearchPopulationPlanV03
+ResearchExposurePlanV02 = ResearchExposurePlanV03
+ResearchOutcomePlanV02 = ResearchOutcomePlanV03
+ResearchMissingDataPlanV02 = ResearchMissingDataPlanV03
+ResearchAnalysisPlanV02 = ResearchAnalysisPlanV03
+ResearchPlanV02 = ResearchPlanV03
+FrozenResearchPlanV02 = FrozenResearchPlanV03
