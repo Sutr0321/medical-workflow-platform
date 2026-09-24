@@ -6,6 +6,7 @@ from medflow.contracts.candidate_spec import (
     CandidateResearchSpecV01,
 )
 from medflow.contracts.planning_session import (
+    PlanningAgentTurnV03,
     PlanningDecisionV03,
     PlanningMessageV03,
     PlanningSessionV03,
@@ -320,28 +321,43 @@ class PlanningSessionServiceV03:
             for item in data["messages"]
         ]
 
-        turn = (
-            self.agent
-            .safe_compose_reply(
-                latest_user_message=(
-                    latest_user_message
+        deterministic_turn = (
+            self._deterministic_turn_if_applicable(
+                session_status=(
+                    session.status
                 ),
-                conversation_history=history,
-                current_state=(
-                    candidate.model_dump(
-                        mode="json"
-                    )
-                ),
-                confirmed_fields=(
-                    data[
-                        "confirmed_fields"
-                    ]
-                ),
-                discussion_targets=(
+                active_targets=(
                     active_targets
                 ),
             )
         )
+
+        if deterministic_turn is not None:
+            turn = deterministic_turn
+
+        else:
+            turn = (
+                self.agent
+                .safe_compose_reply(
+                    latest_user_message=(
+                        latest_user_message
+                    ),
+                    conversation_history=history,
+                    current_state=(
+                        candidate.model_dump(
+                            mode="json"
+                        )
+                    ),
+                    confirmed_fields=(
+                        data[
+                            "confirmed_fields"
+                        ]
+                    ),
+                    discussion_targets=(
+                        active_targets
+                    ),
+                )
+            )
 
         now = datetime.now(
             timezone.utc
@@ -379,6 +395,61 @@ class PlanningSessionServiceV03:
             PlanningSessionV03
             .model_validate(data)
         )
+
+    @staticmethod
+    def _deterministic_turn_if_applicable(
+        *,
+        session_status: str,
+        active_targets: list[str],
+    ) -> PlanningAgentTurnV03 | None:
+        """
+        对少数“系统状态已足够明确”的场景使用确定性回复，
+        避免 LLM 为了丰富措辞而补充未经核验的数据库事实。
+
+        1. 只剩 NHANES 调查周期未定：
+           只问周期，不给未经 Evidence 核对的具体周期推荐。
+
+        2. 从 DISCUSSING 刚进入完整状态：
+           只告诉用户方案已具备预览/冻结条件，
+           不再让 LLM 额外总结并引入新事实。
+        """
+
+        if active_targets == [
+            "dataset.version"
+        ]:
+            return PlanningAgentTurnV03(
+                assistant_message=(
+                    "当前核心研究设计已经基本明确，"
+                    "冻结前还需要确定计划使用的 NHANES 调查周期。"
+                    "调查周期属于研究范围本身，会影响研究时间范围、"
+                    "样本量以及后续变量可用性和可比性评估。"
+                    "请直接告诉我希望使用哪个或哪些周期。"
+                    "具体文件、变量名、权重、PSU、strata 和派生规则，"
+                    "后续在 Data Binding 阶段依据官方资料核对。"
+                ),
+                explicit_updates=[],
+                suggestions=[],
+            )
+
+        if (
+            not active_targets
+            and session_status
+            == "DISCUSSING"
+        ):
+            return PlanningAgentTurnV03(
+                assistant_message=(
+                    "已记录你刚才明确的研究决策。"
+                    "当前 Research Plan 的核心字段已经完整，"
+                    "可以输入“预览方案”检查结构化内容，"
+                    "也可以继续主动修改；确认无误后再输入“冻结方案”，"
+                    "由系统执行正式冻结。"
+                ),
+                explicit_updates=[],
+                suggestions=[],
+            )
+
+        return None
+
 
     @staticmethod
     def _normalize_value(
