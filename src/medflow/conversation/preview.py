@@ -8,25 +8,8 @@ from medflow.conversation.readiness_v03 import (
 
 class ResearchPlanPreviewV03:
     """
-    人类可读的研究方案预览。
+    人类可读的 Rich Research Plan 预览。
     """
-
-    LABELS = {
-        "study_design": "研究设计",
-        "objective": "研究目的",
-        "dataset.name": "数据来源",
-        "population.age_min": "最低年龄",
-        "exposure.name": "主要暴露",
-        "exposure.data_type": "暴露变量类型",
-        "exposure.analysis_form": "暴露分析形式",
-        "exposure.unit": "计划报告单位",
-        "outcome.name": "主要结局",
-        "outcome.data_type": "结局变量类型",
-        "outcome.definition": "结局定义",
-        "covariates": "协变量",
-        "missing_data.strategy": "缺失值处理",
-        "analysis.method": "主分析方法",
-    }
 
     @staticmethod
     def render(
@@ -35,34 +18,6 @@ class ResearchPlanPreviewV03:
     ) -> str:
 
         data = spec.model_dump()
-
-        rows = [
-            ("study_design", data["study_design"]),
-            ("objective", data["objective"]),
-            ("dataset.name", data["dataset"]["name"]),
-            ("population.age_min", data["population"]["age_min"]),
-            ("exposure.name", data["exposure"]["name"]),
-            ("exposure.data_type", data["exposure"]["data_type"]),
-            ("exposure.analysis_form", data["exposure"]["analysis_form"]),
-            ("exposure.unit", data["exposure"]["unit"]),
-            ("outcome.name", data["outcome"]["name"]),
-            ("outcome.data_type", data["outcome"]["data_type"]),
-            ("outcome.definition", data["outcome"]["definition"]),
-            (
-                "covariates",
-                [
-                    item["name"]
-                    for item in data["covariates"]
-                ],
-            ),
-            ("missing_data.strategy", data["missing_data"]["strategy"]),
-            ("analysis.method", data["analysis"]["method"]),
-        ]
-
-        missing = set(
-            ConversationalReadinessV03
-            .missing_fields(spec)
-        )
 
         lines = [
             "========================================",
@@ -74,20 +29,34 @@ class ResearchPlanPreviewV03:
             confirmed_fields
         )
 
-        for path, value in rows:
+        missing = set(
+            ConversationalReadinessV03
+            .missing_fields(spec)
+        )
 
-            label = (
-                ResearchPlanPreviewV03
-                .LABELS[path]
-            )
+        def add_row(
+            path: str,
+            label: str,
+            value,
+            *,
+            optional: bool = False,
+        ):
 
             if path in missing:
                 marker = "⚠"
                 shown = "待讨论"
 
-            elif path == "covariates" and not value:
+            elif value in (
+                None,
+                "",
+                [],
+            ):
                 marker = "—"
-                shown = "未设置"
+                shown = (
+                    "未设置"
+                    if optional
+                    else "待讨论"
+                )
 
             elif path in confirmed:
                 marker = "✅"
@@ -96,11 +65,7 @@ class ResearchPlanPreviewV03:
                     ._format_value(value)
                 )
 
-            elif value not in (
-                None,
-                [],
-                "",
-            ):
+            else:
                 marker = "◌"
                 shown = (
                     ResearchPlanPreviewV03
@@ -108,13 +73,205 @@ class ResearchPlanPreviewV03:
                     + "（已提取，建议最终预览时确认）"
                 )
 
-            else:
-                marker = "—"
-                shown = "未设置"
-
             lines.append(
                 f"{marker} {label}：{shown}"
             )
+
+        add_row(
+            "study_design",
+            "研究设计",
+            data["study_design"],
+        )
+
+        add_row(
+            "objective",
+            "研究目的",
+            data["objective"],
+        )
+
+        add_row(
+            "dataset.name",
+            "数据来源",
+            data["dataset"]["name"],
+        )
+
+        add_row(
+            "dataset.version",
+            "数据周期/版本",
+            data["dataset"]["version"],
+            optional=True,
+        )
+
+        add_row(
+            "population.age_min",
+            "最低年龄",
+            data["population"]["age_min"],
+        )
+
+        add_row(
+            "exposure.name",
+            "主要暴露",
+            data["exposure"]["name"],
+        )
+
+        add_row(
+            "exposure.data_type",
+            "暴露变量类型",
+            data["exposure"]["data_type"],
+        )
+
+        add_row(
+            "exposure.analysis_form",
+            "暴露分析形式",
+            data["exposure"]["analysis_form"],
+        )
+
+        add_row(
+            "exposure.unit",
+            "计划报告单位",
+            data["exposure"]["unit"],
+            optional=True,
+        )
+
+        add_row(
+            "outcome.name",
+            "主要结局",
+            data["outcome"]["name"],
+        )
+
+        add_row(
+            "outcome.data_type",
+            "结局变量类型",
+            data["outcome"]["data_type"],
+        )
+
+        add_row(
+            "outcome.definition",
+            "主结局定义",
+            data["outcome"]["definition"],
+        )
+
+        add_row(
+            "outcome.sensitivity_definitions",
+            "结局敏感性定义",
+            data["outcome"][
+                "sensitivity_definitions"
+            ],
+            optional=True,
+        )
+
+        add_row(
+            "covariates",
+            "协变量",
+            [
+                item["name"]
+                for item in data["covariates"]
+            ],
+        )
+
+        add_row(
+            "missing_data.strategy",
+            "缺失值总策略",
+            data["missing_data"]["strategy"],
+        )
+
+        add_row(
+            "missing_data.mode",
+            "缺失值策略模式",
+            data["missing_data"]["mode"],
+            optional=True,
+        )
+
+        add_row(
+            "missing_data.assessment",
+            "缺失值评估内容",
+            data["missing_data"]["assessment"],
+            optional=True,
+        )
+
+        add_row(
+            "missing_data.decision_rule",
+            "缺失值决策规则",
+            data["missing_data"]["decision_rule"],
+            optional=True,
+        )
+
+        add_row(
+            "missing_data.sensitivity_plan",
+            "缺失值敏感性分析",
+            data["missing_data"]["sensitivity_plan"],
+            optional=True,
+        )
+
+        add_row(
+            "analysis.method",
+            "主分析方法",
+            data["analysis"]["method"],
+        )
+
+        add_row(
+            "analysis.effect_measure",
+            "主要效应量",
+            data["analysis"]["effect_measure"],
+            optional=True,
+        )
+
+        ci_level = (
+            data["analysis"]["ci_level"]
+        )
+
+        ci_display = (
+            f"{int(ci_level * 100)}%"
+            if isinstance(
+                ci_level,
+                (int, float),
+            )
+            else ci_level
+        )
+
+        add_row(
+            "analysis.ci_level",
+            "置信区间",
+            ci_display,
+            optional=True,
+        )
+
+        add_row(
+            "analysis.survey_design_required",
+            "复杂抽样设计",
+            (
+                "需要"
+                if data["analysis"][
+                    "survey_design_required"
+                ] is True
+                else (
+                    "不需要"
+                    if data["analysis"][
+                        "survey_design_required"
+                    ] is False
+                    else None
+                )
+            ),
+            optional=True,
+        )
+
+        add_row(
+            "analysis.secondary_analyses",
+            "次要分析",
+            data["analysis"][
+                "secondary_analyses"
+            ],
+            optional=True,
+        )
+
+        add_row(
+            "analysis.sensitivity_analyses",
+            "分析敏感性方案",
+            data["analysis"][
+                "sensitivity_analyses"
+            ],
+            optional=True,
+        )
 
         blockers = (
             ConversationalReadinessV03
