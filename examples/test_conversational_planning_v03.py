@@ -58,6 +58,9 @@ from medflow.conversation.store_v03 import (
 from medflow.execution.capability import (
     ExecutionCapabilityCheckerV03,
 )
+from medflow.spec.candidate_updater import (
+    CandidateSpecUpdater,
+)
 from medflow.spec.candidate_validator import (
     CandidateSpecValidator,
 )
@@ -395,6 +398,96 @@ assert any(
 
 print(
     "PASS：多变量模型 + 空协变量不会再 READY_TO_FREEZE"
+)
+
+
+print()
+print("2.65 周期确定后清理失效的待确定措辞")
+
+stale_cycle_candidate = build_complete_candidate()
+
+stale_cycle_data = (
+    stale_cycle_candidate.model_dump()
+)
+
+stale_cycle_data[
+    "dataset"
+][
+    "version"
+] = None
+
+stale_cycle_data[
+    "outcome"
+][
+    "definition"
+] = (
+    "按研究者确认的现场平均血压阈值构造结局；"
+    "具体使用哪些血压读数以及平均规则"
+    "待确定 NHANES 调查周期后，"
+    "在数据绑定阶段按照官方文档核对。"
+)
+
+stale_cycle_candidate = (
+    CandidateResearchSpecV01
+    .model_validate(
+        stale_cycle_data
+    )
+)
+
+stale_cycle_candidate = (
+    CandidateSpecUpdater
+    .apply_answers(
+        spec=stale_cycle_candidate,
+        answers={
+            "dataset.version": (
+                "2013-2014, 2015-2016, 2017-2018"
+            )
+        },
+    )
+)
+
+(
+    normalized_cycle_candidate,
+    normalization_decisions,
+) = (
+    PlanningSessionServiceV03
+    ._normalize_resolved_dependencies(
+        candidate=stale_cycle_candidate,
+        answers={
+            "dataset.version": (
+                "2013-2014, 2015-2016, 2017-2018"
+            )
+        },
+        decided_at=datetime.now(
+            timezone.utc
+        ),
+    )
+)
+
+assert "待确定 NHANES 调查周期后" not in (
+    normalized_cycle_candidate
+    .outcome
+    .definition
+)
+
+assert "依据已确定的 NHANES 调查周期" in (
+    normalized_cycle_candidate
+    .outcome
+    .definition
+)
+
+assert len(
+    normalization_decisions
+) == 1
+
+assert (
+    normalization_decisions[0]
+    .source
+    == "SYSTEM_NORMALIZATION"
+)
+
+print(
+    "PASS：周期确定后失效的等待措辞会被确定性清理并写入审计"
 )
 
 
