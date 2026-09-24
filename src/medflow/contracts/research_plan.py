@@ -8,130 +8,127 @@ from pydantic import (
 )
 
 
-class ResearchDatasetPlanV02(BaseModel):
+class ResearchDatasetPlanV03(BaseModel):
     """
-    研究计划中确认的数据来源名称。
+    正式 Research Plan 中的数据来源语义。
 
-    注意：
-    这里不是数据文件路径，也不是数据表/变量绑定。
+    version 保存研究者已经明确指定的调查周期/数据版本。
+    真实文件路径与真实变量绑定仍属于 Data Binding。
     """
+
     name: str
 
+    version: str | None = None
 
-class ResearchPopulationPlanV02(BaseModel):
+
+class ResearchPopulationPlanV03(BaseModel):
     description: str | None = None
     age_min: float
     age_max: float | None = None
 
 
-class ResearchExposurePlanV02(BaseModel):
-    """
-    研究计划中的暴露语义。
-
-    preferred_unit 只是研究者希望解释/报告时采用的单位，
-    不代表真实数据源中的实际单位。
-
-    真实源变量单位必须在 Data Binding 阶段验证。
-    """
+class ResearchExposurePlanV03(BaseModel):
     name: str
+    data_type: str
+    analysis_form: str
 
-    data_type: Literal[
-        "continuous",
-        "categorical",
-        "binary",
-    ]
-
-    analysis_form: Literal[
-        "continuous",
-        "categorical",
-    ]
-
+    # 计划报告单位，不代表真实源单位。
     preferred_unit: str | None = None
 
 
-class ResearchOutcomePlanV02(BaseModel):
+class ResearchOutcomePlanV03(BaseModel):
     """
-    研究计划中的结局语义。
-
-    definition 是科研人员确认后的自然语言研究定义，
-    不是可直接执行的变量派生表达式。
-
-    真正的 source column / coding / derivation
-    留到 Data Binding。
+    definition 保存主定义；
+    sensitivity_definitions 保存替代阈值/敏感性分析定义。
     """
+
     name: str
-
-    data_type: Literal[
-        "binary",
-    ]
-
+    data_type: str
     definition: str
 
-
-class ResearchMissingDataPlanV02(BaseModel):
-    strategy: Literal[
-        "complete_case_global",
-    ]
+    sensitivity_definitions: list[str] = Field(
+        default_factory=list
+    )
 
 
-class ResearchAnalysisPlanV02(BaseModel):
-    method: Literal[
-        "logistic_regression",
-    ]
-
-
-class ResearchPlanV02(BaseModel):
+class ResearchMissingDataPlanV03(BaseModel):
     """
-    人工审核完成后的正式研究计划。
+    缺失值计划支持固定策略和数据依赖策略。
+    """
 
-    它已经冻结研究意图，
-    但还不是“可直接执行”的统计任务。
+    strategy: str
 
-    后续需要经过 Data Binding，
-    才能生成真正的 Executable Analysis Spec。
+    mode: str | None = None
+
+    assessment: list[str] = Field(
+        default_factory=list
+    )
+
+    decision_rule: str | None = None
+
+    sensitivity_plan: str | None = None
+
+
+class ResearchAnalysisPlanV03(BaseModel):
+    """
+    主模型与补充/敏感性分析分离保存。
+    """
+
+    primary_model: str
+
+    effect_measure: str | None = None
+
+    ci_level: float | None = None
+
+    survey_design_required: bool | None = None
+
+    secondary_analyses: list[str] = Field(
+        default_factory=list
+    )
+
+    sensitivity_analyses: list[str] = Field(
+        default_factory=list
+    )
+
+
+class ResearchPlanV03(BaseModel):
+    """
+    V0.3 Rich Research Plan。
+
+    冻结研究意图，不冻结真实数据列名、编码、权重变量、
+    PSU/strata 变量或可执行派生表达式。
     """
 
     schema_version: Literal[
-        "0.2.1"
-    ] = "0.2.1"
+        "0.3.0"
+    ] = "0.3.0"
 
     source_question: str
 
-    study_design: Literal[
-        "cross_sectional",
-    ]
+    study_design: str
 
-    objective: Literal[
-        "association",
-    ]
+    objective: str
 
-    dataset: ResearchDatasetPlanV02
+    dataset: ResearchDatasetPlanV03
 
-    population: ResearchPopulationPlanV02
+    population: ResearchPopulationPlanV03
 
-    exposure: ResearchExposurePlanV02
+    exposure: ResearchExposurePlanV03
 
-    outcome: ResearchOutcomePlanV02
+    outcome: ResearchOutcomePlanV03
 
     covariates: list[str] = Field(
         default_factory=list
     )
 
-    missing_data: ResearchMissingDataPlanV02
+    missing_data: ResearchMissingDataPlanV03
 
-    analysis: ResearchAnalysisPlanV02
+    analysis: ResearchAnalysisPlanV03
 
 
-class FrozenResearchPlanV02(BaseModel):
+class FrozenResearchPlanV03(BaseModel):
     """
-    正式冻结后的研究计划。
-
-    从这里开始：
-    - 不允许 AI 修改
-    - 不允许直接修改
-    - 修改研究计划必须创建新版本
-
-    但它仍需经过 Data Binding 才能执行。
+    正式冻结后的 Rich Research Plan。
     """
 
     model_config = ConfigDict(
@@ -157,4 +154,21 @@ class FrozenResearchPlanV02(BaseModel):
 
     reviewed_by: str
 
-    research_plan: ResearchPlanV02
+    research_plan: ResearchPlanV03
+
+
+# ==========================================
+# Backward compatibility aliases
+# ==========================================
+# 旧 V0.2 模块仍可能导入这些名称。
+# 它们现在统一指向 Rich Research Plan V0.3，
+# 避免升级 Schema 时破坏历史测试与模块导入。
+
+ResearchDatasetPlanV02 = ResearchDatasetPlanV03
+ResearchPopulationPlanV02 = ResearchPopulationPlanV03
+ResearchExposurePlanV02 = ResearchExposurePlanV03
+ResearchOutcomePlanV02 = ResearchOutcomePlanV03
+ResearchMissingDataPlanV02 = ResearchMissingDataPlanV03
+ResearchAnalysisPlanV02 = ResearchAnalysisPlanV03
+ResearchPlanV02 = ResearchPlanV03
+FrozenResearchPlanV02 = FrozenResearchPlanV03

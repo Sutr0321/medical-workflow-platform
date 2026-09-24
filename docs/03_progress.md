@@ -1,111 +1,146 @@
 # 03 项目进度
 
-最后更新：2026-09-23
+最后更新：2026-09-24
 
-## 1. 稳定基线
+## 当前稳定基线
 
 ```text
 v0.1.0-schema-contract
 ```
 
-V0.1 已完成并保留，不直接重写历史版本。
-
-## 2. 当前开发
-
-当前分支：
+## 当前开发分支
 
 ```text
-feat/research-spec-v0.2
+feat/conversational-planning-v0.3
 ```
 
-当前目标：
+## 当前停止点
 
-> **Research Planning / Review Layer V0.2**
+> **Step 1 已完成。现在停止继续扩 Research Planning，下一步进入 Step 2：Simple YAML。**
 
-## 3. 已完成
+```text
+第 1 步  Schema Contract                    ✅
+         └─ Conversational Planning V0.3    ✅ 主链路验收通过
 
-| 模块 | 状态 | 说明 |
-|---|---|---|
-| DeepSeek API | ✅ | 已接入 |
-| Candidate Research Spec V0.1 | ✅ | 稳定基线 |
-| 固定 Validator / open issues | ✅ | 不依赖 LLM |
-| Candidate Updater | ✅ | 支持结构化人工补充 |
-| Freeze / Hash / Store V0.1 | ✅ | 已测试 |
-| Algorithm I/O Schema | ✅ | 已测试 |
-| Result Schema | ✅ | 已测试 |
-| Candidate Proposal V0.2 | ✅ | 新增人类审核层 |
-| Proposal Option / Item | ✅ | 机器值与人类标签分离 |
-| Generic Review Engine V0.2 | ✅ | 不按字段复制确认函数 |
-| Review Decision Log V0.2 | ✅ | 独立审计记录 |
-| Research Plan V0.2 | ✅ | 研究计划与建议层分离；尚需 Data Binding |
-| 模糊语义 Fail Closed | ✅ | 执行层阻止待确认/视情况等 |
-| Research Plan Hash / Freeze V0.2 | ✅ | 已实现 |
-| Planning Bundle Store | ✅ | proposal / review_log / research_plan 分离保存 |
-| V0.2 自动验收脚本 | ✅ | 已写入分支 |
-| V0.2 交互 Demo | ✅ | 已写入分支 |
-
-## 4. 待本地验收
-
-需要在本地执行：
-
-```bat
-python examples\test_research_spec_v02.py
+第 2 步  Simple YAML                        ⬅️ NEXT
+第 3 步  YAML → DAG                         ⬜
+第 4 步  Mock Algorithms                    ⬜
+第 5 步  Workflow Engine                    ⬜
+第 6 步  Algorithm Registry                 ⬜
+第 7 步  Result Registry                    ⬜
+第 8 步  Replace One Real Algorithm         ⬜
 ```
 
-通过后再执行：
-
-```bat
-python examples\run_research_spec_v02_demo.py
-```
-
-当前 GitHub 分支已写入代码，但在合并 main 前应完成本地测试。
-
-## 5. 尚未完成
+## Step 1 已完成内容
 
 | 模块 | 状态 |
 |---|---|
-| Data Binding Contract | ⬜ |
-| Rule Engine | ⬜ |
-| YAML Template | ⬜ |
-| YAML → DAG | ⬜ |
-| DAG Validator | ⬜ |
-| Algorithm Registry | ⬜ |
-| Mock Algorithm Block | ⬜ |
+| DeepSeek API Client | ✅ |
+| Candidate Research Spec | ✅ |
+| Pydantic Schema Validation | ✅ |
+| Deterministic Validator | ✅ |
+| Candidate Updater | ✅ |
+| Algorithm Input Schema | ✅ |
+| Algorithm Output Schema | ✅ |
+| Algorithm Estimate Schema | ✅ |
+| Result Schema | ✅ |
+| Research Plan / Freeze / Hash | ✅ |
+| Planning Session V0.3 | ✅ |
+| Conversation Messages | ✅ |
+| Confirmed Decision History | ✅ |
+| Pending AI Suggestions | ✅ |
+| Conversational Planning Agent | ✅ |
+| Two-stage turn processing | ✅ |
+| Deterministic Readiness | ✅ |
+| Confirmed-field no-repeat rule | ✅ |
+| NHANES cycle readiness rule | ✅ |
+| Research Plan Preview | ✅ |
+| Deterministic Finalizer | ✅ |
+| Transcript / Review Log / Research Plan Store | ✅ |
+| Execution Capability Checker | ✅ |
+| Command Router | ✅ |
+| System Normalization Audit | ✅ |
+| V0.3 CLI Demo | ✅ |
+
+## V0.3 人工验收结果
+
+已实际完成：
+
+```text
+完整 NHANES 研究方案
+→ 自动结构化
+→ 周期缺失被识别为 blocking
+→ 用户补充 2013–2014 / 2015–2016 / 2017–2018
+→ READY_TO_FREEZE
+→ Preview
+→ 用户确认
+→ Frozen Rich Research Plan V0.3
+→ JSON 落盘
+```
+
+并已检查 `research_plan.json`，确认以下内容没有在冻结过程中丢失：
+
+- dataset version / cycles
+- outcome definition
+- sensitivity definitions
+- covariates
+- missing-data strategy / mode / assessment / decision rule / sensitivity plan
+- primary model
+- effect measure
+- 95% CI
+- survey design requirement
+- RCS
+- Poisson / PR sensitivity analysis
+- plan id / version / content hash
+
+## 当前明确没有实现
+
+| 模块 | 状态 |
+|---|---|
+| Simple YAML Workflow | ⬜ |
+| YAML Reader | ⬜ |
+| YAML Workflow Schema | ⬜ |
+| DAG | ⬜ |
+| Topological Sort | ⬜ |
+| Cycle Detection | ⬜ |
+| Mock Algorithms | ⬜ |
 | Workflow Engine | ⬜ |
+| Algorithm Registry | ⬜ |
 | Result Registry | ⬜ |
-| 真实 Logistic Regression Block | ⬜ |
+| Data Binding Contract | ⬜ |
+| Executable Analysis Spec | ⬜ |
+| Real Logistic Regression | ⬜ |
 | Golden Test | ⬜ |
-| Web 前端 | ⬜ |
+| Web Chat UI | ⬜ |
 
-## 6. 当前判断
+## 下一步：Step 2
 
-项目目前已经不再只是：
-
-```text
-输入一句话
-→ 打印 JSON
-→ 保存 JSON
-```
-
-V0.2 开始形成：
+下一步只完成：
 
 ```text
-语义提取
-→ 候选方案
-→ 人工审核
-→ 审计日志
-→ 冻结研究计划
+Simple YAML
+→ YAML Reader
+→ Pydantic Validation
 ```
 
-但真正跨出 Demo/MVP 的关键节点仍然是：
+第一版场景：
 
 ```text
-真实数据绑定
-→ 生成可执行分析任务
-→ 自动 Workflow
-→ 真实 Logistic
-→ Result Registry
-→ 与人工结果一致
+横断面研究 + 二分类结局
 ```
 
-因此 V0.2 完成后不继续堆 CLI 功能，而应尽快进入执行链。
+流程：
+
+```text
+数据准备 → 基线表 → Logistic → RCS
+```
+
+验收标准：
+
+1. 程序能正确读取 YAML。
+2. 能读到每个 step 的 id。
+3. 能读到 `depends_on`。
+4. 能读到 algorithm id 和 version。
+5. 缺失关键字段时 Pydantic 拒绝。
+
+当前 Step 2 暂不实现 DAG、调度和真实统计。

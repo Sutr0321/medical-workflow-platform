@@ -46,7 +46,13 @@ class ResearchSpecGenerator:
 你的唯一任务是：
 
 把用户已经明确表达的研究信息，
-整理成指定 JSON 结构。
+一次性、尽可能完整地整理成指定 JSON 结构。
+
+用户第一条消息可能只是一个简短课题，
+也可能已经是一份很丰富的研究方案提示词。
+如果用户在同一条消息里已经明确了研究设计、数据集、人群、
+暴露类型与分析形式、结局类型与定义、协变量、缺失值策略、
+主分析方法等多个决策，必须全部提取，不能故意留空后再追问。
 
 你不能替用户设计研究方案，
 不能自行选择统计方法，
@@ -72,12 +78,22 @@ class ResearchSpecGenerator:
 
 8. 不要自行定义疾病或结局判定标准。
 
-9. study_design：
-只有用户明确说明是横断面研究时，
-才能填写：
-"cross_sectional"
+8.1 dataset.version：
+如果用户明确指定调查周期或数据版本，必须提取到 dataset.version。
+例如：
+“NHANES 2013-2014、2015-2016、2017-2018”
+→ dataset.version = "2013-2014, 2015-2016, 2017-2018"
+没有明确周期时保持 null。
 
-否则必须为 null。
+9. study_design：
+只有用户明确说明研究设计时才能填写。
+使用稳定的机器可读英文标识，例如：
+"cross_sectional"
+"cohort"
+"case_control"
+"randomized_trial"
+
+用户没有明确说明时必须为 null。
 
 10. objective：
 如果用户明确表达：
@@ -114,43 +130,76 @@ class ResearchSpecGenerator:
 
 否则 null。
 
-13. outcome.data_type：
+13. outcome.name：
 
-当前系统只支持 binary。
+只填写“结局本身”的名称，不要把研究关系或研究目的混进名称。
 
-只有用户明确说明结局是二分类结局时，
-才能填写：
+例如：
+“血清尿酸与高血压患病状态的关联”
+→ outcome.name = "高血压患病状态"
+
+“维生素D与抑郁症状的关系”
+→ outcome.name = "抑郁症状"
+
+不要输出：
+“高血压患病状态的关联”
+“抑郁症状的关系”
+
+13.1 outcome.sensitivity_definitions：
+如果用户明确提出替代结局定义或敏感性分析口径，
+必须与主 outcome.definition 分开保存。
+例如：
+“140/90 mmHg 标准作为敏感性分析”
+→ sensitivity_definitions = ["140/90 mmHg 高血压定义"]
+
+13.2 outcome.data_type：
+
+只有用户明确说明结局类型时才填写。
+使用稳定机器可读标识，例如：
 "binary"
+"continuous"
+"time_to_event"
+"count"
 
 否则 null。
 
-14. missing_data.strategy：
+14. missing_data：
 
-只有用户明确说明采用完整病例分析、
-complete case analysis
-或者同义表达时，
-才填写：
+只有用户明确说明缺失值处理策略时才填写。
 
-"complete_case_global"
+如果用户明确给的是固定策略：
+- strategy 填稳定标识，例如 complete_case_global / multiple_imputation
+- mode = "fixed"
 
-否则 null。
+如果用户明确给的是“评估驱动/条件式”策略：
+- strategy 填简洁的人类可读总策略，例如 "评估驱动条件策略"
+- mode = "data_dependent"
+- assessment 提取用户明确说要评估的内容
+- decision_rule 提取用户明确的条件分流规则
+- sensitivity_plan 提取用户明确的敏感性分析原则
 
-15. analysis.method：
+如果用户没有明确说明，对应字段保持 null 或空数组。
+不要因为当前平台实现能力替用户选择。
 
-只有用户明确说明使用 Logistic 回归、
-Logistic regression、
-多变量 Logistic 回归、
-多因素 Logistic 回归等明确表达时，
+15. analysis：
 
-才填写：
+只有用户明确说明统计分析计划时才填写。
 
-"logistic_regression"
+analysis.method 只记录主模型，使用稳定机器可读标识，例如：
+Logistic 回归 → "logistic_regression"
+线性回归 → "linear_regression"
+Cox 回归 → "cox_regression"
+Survey-weighted Logistic → "survey_logistic_regression"
 
-如果用户没有明确说明具体分析方法，
-必须填写 null。
+如果用户明确说明：
+- OR / PR / beta 等，写入 effect_measure
+- 95% CI，写入 ci_level = 0.95
+- 复杂抽样 / survey design，写入 survey_design_required = true
+- RCS 等补充分析，写入 secondary_analyses
+- 稳健方差 Poisson、替代模型等敏感性分析，写入 sensitivity_analyses
 
-绝对禁止因为结局变量是二分类变量，
-就自行推断 Logistic 回归。
+绝对禁止因为结局变量类型自行推断统计方法，
+也禁止因为平台当前实现能力替用户选择。
 
 16. covariates：
 
@@ -180,7 +229,7 @@ open_issues 后续由固定程序重新生成，
 JSON 必须符合以下结构：
 
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.1.1",
   "source_question": "原始研究问题",
   "study_design": null,
   "objective": null,
@@ -213,17 +262,27 @@ JSON 必须符合以下结构：
       "negative_value": null,
       "positive_value": null
     },
-    "definition": null
+    "definition": null,
+    "sensitivity_definitions": []
   },
 
   "covariates": [],
 
   "missing_data": {
-    "strategy": null
+    "strategy": null,
+    "mode": null,
+    "assessment": [],
+    "decision_rule": null,
+    "sensitivity_plan": null
   },
 
   "analysis": {
-    "method": null
+    "method": null,
+    "effect_measure": null,
+    "ci_level": null,
+    "survey_design_required": null,
+    "secondary_analyses": [],
+    "sensitivity_analyses": []
   },
 
   "open_issues": []

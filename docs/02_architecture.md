@@ -1,19 +1,13 @@
 # 02 架构说明
 
-## 1. 总体架构
+## 1. 目标运行架构
+
+最终平台希望形成：
 
 ```text
-用户提出研究问题
+用户研究问题
         ↓
-LLM Semantic Extractor
-        ↓
-Candidate Research Spec
-        ↓
-Candidate Proposal
-        ↓
-Generic Review Engine
-        ↓
-Review Decision Log
+Conversational Research Planning
         ↓
 Frozen Research Plan
         ↓
@@ -21,203 +15,188 @@ Data Binding
         ↓
 Executable Analysis Spec
         ↓
-Rule Engine
-        ↓
-YAML Template
+Rule / YAML
         ↓
 DAG
         ↓
 Workflow Engine
         ↓
-Algorithm Registry
-        ↓
-Algorithm Block
+Algorithm Registry / Block
         ↓
 Result Registry
-```
-
-## 2. 为什么从 V0.1 升到 V0.2
-
-V0.1 已完成：
-
-- Candidate Research Spec
-- 固定 Validator
-- 人工确认
-- Freeze / Hash / Store
-- Algorithm I/O Contract
-- Result Contract
-
-V0.2 进一步拆开三类本质不同的信息。
-
-### Candidate Proposal
-
-给人看的讨论层。
-
-可以保存：
-
-- 当前值
-- 理由
-- 受控选项
-- 自定义输入入口
-- provenance
-
-### Review Decision Log
-
-保存人工审核过程：
-
-- 谁审核
-- 原始值
-- 最终值
-- 决策动作
-- 时间
-
-### Research Plan
-
-冻结正式研究计划，但还不能直接执行。
-
-只允许明确、标准化、无歧义的语义值。
-
-## 3. LLM 边界
-
-LLM 当前仍只负责：
-
-- 从用户研究问题提取明确表达的信息
-- 输出 Candidate Research Spec
-
-LLM 不负责：
-
-- 自动选择统计方法
-- 自动确定缺失研究条件
-- 自动决定是否冻结
-- 生成正式执行 Spec
-- 直接统计计算
-
-open issues 和执行层检查仍由固定代码完成。
-
-## 4. Proposal Builder
-
-`ProposalBuilderV02` 把 Candidate Spec 转成面向科研人员的审核项。
-
-每个 Proposal Item 包含：
-
-```text
-field_path
-title
-current_value
-reason
-options
-allow_custom
-blocking
-provenance
-```
-
-它替代了“每个字段手写一个确认函数”的扩展方式。
-
-## 5. Generic Review Engine
-
-`ReviewEngineV02` 接收：
-
-```text
-Proposal
-+
-field_path -> selected_value
-```
-
-并输出：
-
-```text
-reviewed Candidate
-+
-ReviewDecisionLogV02
-```
-
-以后增加字段时，主要扩展 Schema / Proposal metadata，而不是继续复制大量 CLI if/else。
-
-## 6. Execution Spec
-
-`ResearchPlanV02` 是经人工审核后冻结的正式研究计划。它不包含真实数据列、实际单位、编码或派生表达式，因此不能直接交给算法执行。
-
-当前包含：
-
-- study_design
-- objective
-- dataset
-- population
-- exposure
-- outcome
-- covariates
-- missing_data
-- analysis
-
-不包含：
-
-- AI 推荐理由
-- alternatives
-- open issues
-- UI 状态
-- 真实数据列名
-
-真实列名属于后续 Data Binding。
-
-## 7. Fail Closed
-
-执行层会拒绝明显模糊语义，例如：
-
-```text
-待确认
-需确认
-进一步确认
-取决于
-视情况
-若为横断面
-若为队列
-可选
-```
-
-这类内容可以存在于讨论阶段，但不能进入正式 Execution Spec。
-
-## 8. Artifact 分离
-
-V0.2 一次正式冻结保存：
-
-```text
-proposal.json
-review_log.json
-execution_spec.json
-```
-
-后续系统先读取 `research_plan.json`，再通过 Data Binding 绑定真实变量、单位、编码与派生规则，之后才生成 Executable Analysis Spec。
-
-Proposal 和 Review Log 用于：
-
-- 人工回看
-- 决策审计
-- 解释为什么最终执行值是当前结果
-
-## 9. 下一阶段
-
-完成 V0.2 本地验收后进入：
-
-```text
-Frozen Execution Spec
         ↓
-Data Binding Contract
-        ↓
-Rule Engine
-        ↓
-YAML Template
-        ↓
-DAG
+Tables / Figures / Manifest
 ```
 
-第一条完整闭环仍以：
+这描述的是最终运行时各层之间的关系。
+
+## 2. 当前开发主线
+
+第一阶段不按“最终架构一次全部实现”，而是按照最小可运行闭环逐步验证：
 
 ```text
-cross_sectional
-+
-binary outcome
-+
-logistic_regression
+Step 1  Schema Contract            ✅
+Step 2  Simple YAML                ⬅️ NEXT
+Step 3  YAML → DAG                 ⬜
+Step 4  Mock Algorithm             ⬜
+Step 5  Workflow Engine            ⬜
+Step 6  Algorithm Registry         ⬜
+Step 7  Result Registry            ⬜
+Step 8  Replace One Real Algorithm ⬜
 ```
 
-作为最小实现。
+Data Binding / Executable Analysis Spec 仍属于最终架构的重要层，但不作为当前 Step 2 的前置任务。
+
+第一版 YAML 可以只使用逻辑任务名和算法名，真实数据字段后续再绑定。
+
+## 3. Research Planning 层
+
+用户主要看到自然语言对话，而不是 JSON 或 field_path。
+
+后台每个 `PlanningSessionV03` 保存：
+
+- session_id
+- messages
+- current_candidate
+- confirmed_fields
+- decisions
+- pending_suggestions
+- status
+- created_at / updated_at
+
+状态：
+
+```text
+DISCUSSING
+READY_TO_FREEZE
+FROZEN
+```
+
+## 4. 两阶段对话处理
+
+每轮对话：
+
+```text
+用户消息
+→ interpret_updates
+→ 确定性更新 Research State
+→ 重新计算 discussion_targets
+→ compose_reply
+```
+
+只有用户当前消息已经明确表达的内容才能成为正式 update。
+
+AI 自己提出的候选方案只能成为 suggestion；未被用户确认前不能写入正式研究状态。
+
+## 5. 确定性边界
+
+V0.3 中固定程序负责：
+
+- Schema 校验
+- 允许更新的 field_path
+- Pydantic 类型约束
+- readiness
+- freeze 前完整性检查
+- content hash
+- immutable Frozen Research Plan
+- 系统命令路由
+- 必要的确定性文本规范化
+
+另外：
+
+- Research Plan 与当前执行能力分离
+- 未核验的数据库事实不能由 Planning Agent 直接当作正式事实
+- Data Binding 之前不确认真实列名、真实单位、权重、PSU、strata 等
+
+## 6. Preview 与 Freeze
+
+`ResearchPlanPreviewV03` 从同一结构化状态生成可读预览。
+
+Freeze 不调用 LLM。
+
+只有：
+
+```text
+READY_TO_FREEZE
++
+用户最终确认
+```
+
+才生成：
+
+```text
+FrozenResearchPlanV03
+```
+
+冻结后当前版本不允许直接修改。
+
+## 7. Frozen Artifact
+
+当前冻结后保存：
+
+```text
+artifacts/conversations_v03/<plan_id>/v1/
+├── planning_session.json
+├── transcript.json
+├── review_log.json
+└── research_plan.json
+```
+
+## 8. Step 2 的架构边界
+
+下一步只实现：
+
+```text
+Simple YAML
++
+YAML Reader
++
+YAML Schema Validation
+```
+
+YAML 第一版只描述：
+
+- step id
+- depends_on
+- algorithm id
+- algorithm version
+
+例如逻辑上：
+
+```text
+data_prepare
+→ baseline_table
+→ logistic
+→ rcs
+```
+
+Step 2 **不负责**：
+
+- 建 DAG
+- 拓扑排序
+- 检测循环依赖
+- 调度算法
+- 找 Registry
+- 保存 Result
+- 绑定真实 NHANES 字段
+- 执行真实统计
+
+这些属于后续步骤。
+
+## 9. Data Binding 边界
+
+后续进入真实数据执行前，Data Binding 负责：
+
+- source file
+- source variable
+- actual source unit
+- coding
+- reference group
+- transformation
+- derived variable
+- derivation rule
+- survey weight / strata / PSU
+
+因此：
+
+> Research Plan 回答“要研究什么”；YAML 回答“流程有哪些步骤”；Data Binding 回答“真实数据库里用什么表示”；Executable Analysis Spec 回答“机器具体怎么执行”。

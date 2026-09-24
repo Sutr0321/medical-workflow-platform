@@ -2,70 +2,105 @@
 
 ## [Unreleased]
 
-### Added
+### V0.3 Added
 
-- Candidate Proposal V0.2
-- Proposal Item / Option Contract
-- Generic Review Engine V0.2
-- Review Decision Log V0.2
-- Research Plan V0.2
-- Frozen Research Plan V0.2
-- Fuzzy semantic Fail-Closed check
-- Proposal / Review Log / Research Plan bundle store
-- Research Planning V0.2 acceptance test
-- Research Planning V0.2 interactive demo
+- PlanningSessionV03
+- PlanningMessageV03
+- PlanningDecisionV03
+- PlanningSuggestionV03
+- PlanningAgentTurnV03
+- ConversationalPlanningAgentV03
+- PlanningSessionServiceV03
+- ConversationalReadinessV03
+- ResearchPlanPreviewV03
+- ConversationalPlanningFinalizerV03
+- ConversationPlanningStoreV03
+- Execution Capability Checker
+- Conversational Planning acceptance test
+- Conversational Planning CLI demo
+- Rich Research Plan V0.3
+- NHANES cycle readiness rule
+- deterministic command routing for preview / freeze / quit / send
+- deterministic system normalization audit record
 
-### Changed
+### V0.3 Changed
 
-- 将“候选建议层”和“机器执行层”分离
-- 冻结对象改为 Research Plan；Data Binding 完成后才生成可执行分析任务
-- 将真实数据列名、实际单位、编码和派生规则明确推迟到 Data Binding 阶段
-- 协作路线调整为先完成 V0.2，再进入 Data Binding / Rule / YAML
+- 对话处理拆成“解释用户明确决策 → 更新结构化状态 → 重新计算目标 → 回复生成”两阶段
+- 已确认字段从下一轮主动讨论目标中排除
+- Research Plan 不再被当前 Logistic / complete-case 实现能力限制
+- AI suggestion 与用户明确决定分离
+- Freeze 保持确定性，不由 LLM 决定
+- NHANES 调查周期属于研究范围时，未确定周期不能进入 READY_TO_FREEZE
+- 当上游研究决策已明确时，可执行不改变研究意图的确定性文本规范化，并记录 SYSTEM_NORMALIZATION
+- Planning Agent 不再允许凭模型记忆把数据库变量、文件、测量规程或权重规则当成已验证事实
+- Rich Research Plan 将主模型、效应量、CI、复杂抽样、次要分析、敏感性分析和缺失值条件策略分开保存
 
-### Planned
+### V0.3 Acceptance
 
-- Data Binding Contract
-- Rule Engine
-- YAML Template
-- YAML → DAG
-- DAG Validator
-- Algorithm Registry
-- Workflow Engine
-- Result Registry
-- Real Logistic Regression Block
-- Golden Test
+已完成端到端人工验收：
+
+```text
+完整研究方案
+→ Conversational Planning
+→ 缺失周期被阻断
+→ 用户补充 NHANES 周期
+→ READY_TO_FREEZE
+→ Preview
+→ 人工确认
+→ Frozen Research Plan V0.3
+→ JSON 落盘
+```
+
+已验证 Frozen JSON 保留：
+
+- dataset version / cycles
+- outcome definition
+- outcome sensitivity definitions
+- missing-data strategy / mode / assessment / decision rule / sensitivity plan
+- primary model
+- effect measure
+- CI level
+- survey design requirement
+- secondary analyses
+- sensitivity analyses
+- plan id / version / content hash
+
+### Current Stop Point
+
+第一阶段开发主线当前停止在：
+
+```text
+Step 1 Schema Contract                    ✅
+└─ Conversational Research Planning V0.3 ✅
+
+Step 2 Simple YAML                        ⬅️ NEXT
+```
+
+当前不继续扩展聊天 Demo。
+
+### Planned Development Order
+
+1. Simple YAML Workflow
+2. YAML → DAG
+3. Mock Algorithms
+4. Workflow Engine
+5. Algorithm Registry
+6. Result Registry
+7. Replace one Mock with one real algorithm
+8. Data Binding / Executable Analysis Spec 在真实数据执行前补齐并接入
 
 ## [v0.1.0-schema-contract] - 2026-09-23
 
 ### Added
 
 - DeepSeek API Client
-- Natural language → Candidate Research Spec
-- Candidate Research Spec Pydantic Schema
-- Candidate fixed Validator
-- open issues
-- Candidate updater
-- Readiness checker
-- Human review service
-- Reviewed Research Spec
+- Candidate Research Spec
+- Deterministic Validator
+- Candidate Updater
+- Readiness Checker
+- Human Review Service
 - Frozen Research Spec
-- Research Spec ID and version
-- SHA-256 content hash
-- Frozen JSON store
-- Algorithm Input Schema
-- Algorithm Output Schema
-- Algorithm Estimate Schema
-- Result Record Schema
-- Research Spec interactive Demo
-- Schema Contract test script
-
-### Verified
-
-- Incomplete Research Spec cannot be confirmed
-- Same Research Spec content produces stable content hash
-- Frozen Research Spec cannot be directly modified
-- Existing Frozen V1 file cannot be overwritten
-- Invalid P value is rejected
-- Missing required algorithm input is rejected
-- Invalid sample size is rejected
-- Invalid spec version is rejected
+- Research Spec ID / Version / Hash
+- Algorithm I/O Schema
+- Result Schema
+- Schema Contract tests

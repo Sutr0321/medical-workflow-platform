@@ -1,236 +1,259 @@
 # 04 开发路线图
 
-## 总目标
+## 总原则
 
-先完成一条可验证的真实闭环：
+第一阶段只做最小可运行闭环。
 
-```text
-研究问题
-↓
-Candidate Research Spec
-↓
-Candidate Proposal
-↓
-人工审核
-↓
-Review Decision Log
-↓
-Frozen Research Plan
-↓
-Data Binding
-↓
-Executable Analysis Spec
-↓
-Rule / YAML
-↓
-DAG
-↓
-Workflow
-↓
-真实 Logistic Regression
-↓
-Result Registry
-↓
-Golden Test
-```
+不一次性同时开发真实数据库、真实算法、工作流、前端和报告系统，而是逐层验证接口是否正确。
 
-## Phase 1：Schema Contract V0.1
+---
+
+## Step 1：定义 Schema
 
 状态：✅ 已完成
 
-标签：
+第一版 Contract：
+
+- Research Spec / Research Plan
+- Algorithm Input / Output
+- Algorithm Estimate
+- Result Schema
+- Pydantic 校验
+
+在此基础上额外完成：
+
+### Conversational Research Planning V0.3
+
+状态：✅ 主链路人工验收通过
 
 ```text
-v0.1.0-schema-contract
+研究主题 / 完整研究方案
+→ Conversational Planning
+→ Structured Research State
+→ Readiness
+→ Preview
+→ 用户确认
+→ Frozen Research Plan
 ```
 
-## Phase 1.5：Research Planning / Review V0.2
+这属于 Step 1 的增强，不改变后续主线顺序。
 
-状态：⏳ 已开发，等待本地验收
+---
 
-目标：
+## Step 2：只写一个简单 YAML
 
-把“给人讨论的候选建议”和“给机器执行的正式 Spec”分离。
+状态：⬅️ NEXT
 
-新增：
+第一版场景：
 
-- CandidateProposalV02
-- ProposalItemV02
-- ProposalOptionV02
-- ReviewDecisionLogV02
-- Generic Review Engine
-- ResearchPlanV02
-- FrozenResearchPlanV02
-- 模糊语义拦截
-- 三文件 artifact bundle
+```text
+横断面研究 + 二分类结局
+```
 
-验收：
+流程：
 
-- Proposal 与 Research Plan 分离
-- 所有人工选择进入 Review Log
-- 相同 Research Plan 产生相同 hash
-- Frozen 不可修改
-- “待确认/视情况/可选”等不能进入正式 Research Plan
+```text
+数据准备
+→ 基线表
+→ Logistic
+→ RCS
+```
 
-## Phase 2：Data Binding Contract
+YAML 只描述：
+
+- step id
+- depends_on
+- algorithm id
+- algorithm version
+
+第一版验收只要求：
+
+- 能正确读取 YAML
+- 能通过 Pydantic 校验
+- 缺关键字段时拒绝
+
+这一阶段不执行统计。
+
+---
+
+## Step 3：YAML 转成 DAG
 
 状态：⬜
 
-目标：
+读取 YAML 后：
 
-把正式研究语义映射到真实数据。
+- 每个 step 变成一个节点
+- `depends_on` 变成边
+- 建立合法执行顺序
+- 检测循环依赖
 
-例如：
+验收：
+
+- 能建立节点和边
+- 能拓扑排序
+- A → B → A 之类循环必须报错
+
+---
+
+## Step 4：算法先用 Mock
+
+状态：⬜
+
+先实现假的算法模块，不做真实统计。
+
+例如 Mock Logistic 可以返回固定结果：
 
 ```text
-血清25-羟基维生素D
-→ LBXVIDMS
-
-高血压
-→ 派生变量 hypertension
+OR = 0.82
+P = 0.001
 ```
 
-Data Binding 负责：
+目标是验证平台能否：
 
-- dataset version
+- 找到算法
+- 传入统一输入
+- 接收统一输出
+- 把结果交给后续模块
+
+---
+
+## Step 5：最简单 Workflow Engine
+
+状态：⬜
+
+第一版只做单机串行。
+
+负责：
+
+- 读取 DAG
+- 找当前可运行节点
+- 调用算法
+- 更新状态
+- 失败后阻断不应继续执行的下游节点
+
+第一版状态可包括：
+
+```text
+PENDING
+RUNNING
+SUCCESS
+FAILED
+```
+
+---
+
+## Step 6：Algorithm Registry
+
+状态：⬜
+
+第一版可以先使用 Python 字典：
+
+```text
+algorithm_id + version
+→ execution entry
+```
+
+后续再扩展运行环境、输入输出 Schema、验证状态等元数据。
+
+---
+
+## Step 7：Result Registry
+
+状态：⬜
+
+注意：
+
+```text
+Result Schema    ✅ 已完成
+Result Registry  ⬜ 尚未实现
+```
+
+第一版 Result Registry 可以先保存 JSON。
+
+核心要求：
+
+- 每次运行有 run_id
+- 能找到每个 step 的结果
+- 表格和图片以后只读取 Registry，不重新跑模型
+
+---
+
+## Step 8：替换一个真实算法
+
+状态：⬜
+
+当：
+
+```text
+方案
+→ YAML
+→ DAG
+→ Workflow
+→ Mock
+→ Result Registry
+```
+
+整条链稳定以后，再替换一个真实算法。
+
+优先候选：
+
+- Baseline Table
+- Logistic Regression
+
+成功标准：
+
+> 替换真实算法时，Workflow 核心代码不需要修改，只需要调整 Registry 中的算法入口。
+
+---
+
+# 后续工程扩展
+
+以下模块仍然重要，但不打乱当前 8 步最小闭环主线。
+
+## Data Binding
+
+真实数据执行前需要把 Research Plan 中的研究概念映射到：
+
 - source file
 - source variable
-- derived variable
-- unit
+- actual unit
 - coding
 - reference group
-- transformation
+- weight / PSU / strata
 - derivation rule
 
-原则：
+## Executable Analysis Spec
 
-> 不修改 Frozen Research Plan。Data Binding 完成后再生成真正的 Executable Analysis Spec。
-
-## Phase 3：Rule + YAML Template
-
-状态：⬜
-
-第一版只支持：
+输入：
 
 ```text
-cross_sectional
-binary outcome
-logistic_regression
-```
-
-验收：
-
-- 相同 Execution Spec 选择相同模板
-- 不调用 LLM
-- 不支持组合 Fail Closed
-
-## Phase 4：YAML → DAG
-
-状态：⬜
-
-需要：
-
-- Node / Edge Schema
-- DAG Parser
-- DAG Validator
-- 环检测
-- 拓扑排序
-
-## Phase 5：Algorithm Registry + Mock Block
-
-状态：⬜
-
-目标：
-
-Workflow 只能通过 Registry 找算法。
-
-第一版注册：
-
-```text
-logistic_regression
-```
-
-## Phase 6：Workflow Engine
-
-状态：⬜
-
-第一版：
-
-- 单机
-- 串行
-- 明确状态
-- 错误即停止
-
-## Phase 7：Result Registry
-
-状态：⬜
-
-结果至少关联：
-
-- spec_id
-- spec_version
-- data_binding_id
-- workflow/template version
-- algorithm_name
-- algorithm_version
-- n_used
-- estimate
-- CI
-- P
-- timestamp
-
-## Phase 8：真实 Logistic Regression Block
-
-状态：⬜
-
-用真实测试数据执行：
-
-```text
-暴露
+Frozen Research Plan
 +
-二分类结局
-+
-协变量
-→ OR / 95%CI / P
+Validated Data Binding
 ```
 
-## Phase 9：Golden Test
+输出机器可执行分析任务。
 
-状态：⬜
+## Golden Test
 
-固定：
+真实算法接入后，需要证明：
 
-- 测试数据
-- Execution Spec
-- Data Binding
-- 人工标准代码
-- 人工标准结果
-- 自动结果
-- 数值容差
+> 平台结果与人工标准代码在预设容差内一致。
 
-只有通过 Golden Test 的算法版本才允许标记为 validated。
+## Web UI
 
-## Phase 10：算法扩展
+后端主链稳定后再开发：
 
-在闭环稳定后再增加：
+```text
+左侧 AI 对话
+右侧 Research Plan Preview
+底部人工确认 / Freeze
+```
 
-- Linear Regression
-- Cox Regression
-- RCS
-- Survey-weighted Regression
-- Kaplan-Meier
-- Mediation
-- Clustering
+---
 
-## Phase 11：Web UI
+## 当前唯一下一任务
 
-最后再做：
+> **Step 2：Simple YAML。**
 
-- 研究问题输入
-- Proposal 审核
-- Review Log 查看
-- Execution Spec 查看
-- Workflow 状态
-- Result 展示
-
-不在后端闭环稳定前投入复杂前端。
+在 Step 2 验收完成前，不提前进入 DAG、Workflow、Registry 或真实统计。

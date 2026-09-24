@@ -4,13 +4,13 @@ from medflow.contracts.candidate_spec import (
     CandidateResearchSpecV01,
 )
 from medflow.contracts.research_plan import (
-    ResearchAnalysisPlanV02,
-    ResearchDatasetPlanV02,
-    ResearchExposurePlanV02,
-    ResearchMissingDataPlanV02,
-    ResearchOutcomePlanV02,
-    ResearchPlanV02,
-    ResearchPopulationPlanV02,
+    ResearchAnalysisPlanV03,
+    ResearchDatasetPlanV03,
+    ResearchExposurePlanV03,
+    ResearchMissingDataPlanV03,
+    ResearchOutcomePlanV03,
+    ResearchPlanV03,
+    ResearchPopulationPlanV03,
 )
 from medflow.contracts.review_log import (
     ReviewDecisionLogV02,
@@ -21,26 +21,12 @@ from medflow.spec.readiness import (
 )
 
 
-class ResearchPlanBuilderV02:
+class ResearchPlanBuilderV03:
     """
     把审核后的 Candidate Research Spec
-    压缩成正式 Research Plan。
+    压缩成正式 Rich Research Plan V0.3。
 
-    重要边界：
-
-    Research Plan 负责冻结“研究意图”，
-    但它还不能直接执行。
-
-    它不包含：
-    - 推荐理由
-    - alternatives
-    - open issues
-    - UI 状态
-    - 真实数据列名
-    - 真实编码
-    - 可执行派生表达式
-
-    后三类信息属于后续 Data Binding。
+    这里冻结研究意图，不冻结真实源变量绑定。
     """
 
     FUZZY_PATTERNS = (
@@ -59,7 +45,7 @@ class ResearchPlanBuilderV02:
         *,
         reviewed_candidate: CandidateResearchSpecV01,
         review_log: ReviewDecisionLogV02,
-    ) -> ResearchPlanV02:
+    ) -> ResearchPlanV03:
 
         if review_log.status != "COMPLETE":
             raise ValueError(
@@ -82,67 +68,38 @@ class ResearchPlanBuilderV02:
                 "不能生成正式 Research Plan。"
             )
 
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.study_design,
-            "study_design",
-        )
+        required = {
+            "study_design": reviewed_candidate.study_design,
+            "objective": reviewed_candidate.objective,
+            "dataset.name": reviewed_candidate.dataset.name,
+            "population.age_min": reviewed_candidate.population.age_min,
+            "exposure.name": reviewed_candidate.exposure.name,
+            "exposure.data_type": reviewed_candidate.exposure.data_type,
+            "exposure.analysis_form": reviewed_candidate.exposure.analysis_form,
+            "outcome.name": reviewed_candidate.outcome.name,
+            "outcome.data_type": reviewed_candidate.outcome.data_type,
+            "outcome.definition": reviewed_candidate.outcome.definition,
+            "missing_data.strategy": reviewed_candidate.missing_data.strategy,
+            "analysis.method": reviewed_candidate.analysis.method,
+        }
 
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.objective,
-            "objective",
-        )
+        for field_path, value in required.items():
+            ResearchPlanBuilderV03._require(
+                value,
+                field_path,
+            )
 
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.dataset.name,
-            "dataset.name",
-        )
+        if (
+            reviewed_candidate.dataset.name
+            and reviewed_candidate.dataset.name.strip().upper()
+            == "NHANES"
+        ):
+            ResearchPlanBuilderV03._require(
+                reviewed_candidate.dataset.version,
+                "dataset.version",
+            )
 
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.population.age_min,
-            "population.age_min",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.exposure.name,
-            "exposure.name",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.exposure.data_type,
-            "exposure.data_type",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.exposure.analysis_form,
-            "exposure.analysis_form",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.outcome.name,
-            "outcome.name",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.outcome.data_type,
-            "outcome.data_type",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.outcome.definition,
-            "outcome.definition",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.missing_data.strategy,
-            "missing_data.strategy",
-        )
-
-        ResearchPlanBuilderV02._require(
-            reviewed_candidate.analysis.method,
-            "analysis.method",
-        )
-
-        plan = ResearchPlanV02(
+        plan = ResearchPlanV03(
             source_question=(
                 reviewed_candidate
                 .source_question
@@ -155,14 +112,19 @@ class ResearchPlanBuilderV02:
                 reviewed_candidate
                 .objective
             ),
-            dataset=ResearchDatasetPlanV02(
+            dataset=ResearchDatasetPlanV03(
                 name=(
                     reviewed_candidate
                     .dataset
                     .name
-                )
+                ),
+                version=(
+                    reviewed_candidate
+                    .dataset
+                    .version
+                ),
             ),
-            population=ResearchPopulationPlanV02(
+            population=ResearchPopulationPlanV03(
                 description=(
                     reviewed_candidate
                     .population
@@ -179,7 +141,7 @@ class ResearchPlanBuilderV02:
                     .age_max
                 ),
             ),
-            exposure=ResearchExposurePlanV02(
+            exposure=ResearchExposurePlanV03(
                 name=(
                     reviewed_candidate
                     .exposure
@@ -201,7 +163,7 @@ class ResearchPlanBuilderV02:
                     .unit
                 ),
             ),
-            outcome=ResearchOutcomePlanV02(
+            outcome=ResearchOutcomePlanV03(
                 name=(
                     reviewed_candidate
                     .outcome
@@ -217,32 +179,78 @@ class ResearchPlanBuilderV02:
                     .outcome
                     .definition
                 ),
+                sensitivity_definitions=(
+                    reviewed_candidate
+                    .outcome
+                    .sensitivity_definitions
+                ),
             ),
             covariates=[
                 item.name
-                for item
-                in reviewed_candidate
+                for item in reviewed_candidate
                 .covariates
             ],
-            missing_data=ResearchMissingDataPlanV02(
+            missing_data=ResearchMissingDataPlanV03(
                 strategy=(
                     reviewed_candidate
                     .missing_data
                     .strategy
-                )
+                ),
+                mode=(
+                    reviewed_candidate
+                    .missing_data
+                    .mode
+                ),
+                assessment=(
+                    reviewed_candidate
+                    .missing_data
+                    .assessment
+                ),
+                decision_rule=(
+                    reviewed_candidate
+                    .missing_data
+                    .decision_rule
+                ),
+                sensitivity_plan=(
+                    reviewed_candidate
+                    .missing_data
+                    .sensitivity_plan
+                ),
             ),
-            analysis=ResearchAnalysisPlanV02(
-                method=(
+            analysis=ResearchAnalysisPlanV03(
+                primary_model=(
                     reviewed_candidate
                     .analysis
                     .method
-                )
+                ),
+                effect_measure=(
+                    reviewed_candidate
+                    .analysis
+                    .effect_measure
+                ),
+                ci_level=(
+                    reviewed_candidate
+                    .analysis
+                    .ci_level
+                ),
+                survey_design_required=(
+                    reviewed_candidate
+                    .analysis
+                    .survey_design_required
+                ),
+                secondary_analyses=(
+                    reviewed_candidate
+                    .analysis
+                    .secondary_analyses
+                ),
+                sensitivity_analyses=(
+                    reviewed_candidate
+                    .analysis
+                    .sensitivity_analyses
+                ),
             ),
         )
 
-        # 只检查正式研究语义。
-        # source_question 是原始输入，不作为执行语义，
-        # 因此不参与模糊词拦截。
         semantic_data = (
             plan.model_dump(
                 exclude={
@@ -251,7 +259,7 @@ class ResearchPlanBuilderV02:
             )
         )
 
-        ResearchPlanBuilderV02._scan_fuzzy_text(
+        ResearchPlanBuilderV03._scan_fuzzy_text(
             semantic_data
         )
 
@@ -283,48 +291,33 @@ class ResearchPlanBuilderV02:
     ) -> None:
 
         if isinstance(value, dict):
-
-            for key, sub_value in (
-                value.items()
-            ):
-
+            for key, sub_value in value.items():
                 new_path = (
                     f"{path}.{key}"
                     if path
                     else key
                 )
-
-                ResearchPlanBuilderV02._scan_fuzzy_text(
+                ResearchPlanBuilderV03._scan_fuzzy_text(
                     sub_value,
                     new_path,
                 )
-
             return
 
         if isinstance(value, list):
-
-            for index, sub_value in enumerate(
-                value
-            ):
-
-                ResearchPlanBuilderV02._scan_fuzzy_text(
+            for index, sub_value in enumerate(value):
+                ResearchPlanBuilderV03._scan_fuzzy_text(
                     sub_value,
                     f"{path}[{index}]",
                 )
-
             return
 
-        if not isinstance(
-            value,
-            str,
-        ):
+        if not isinstance(value, str):
             return
 
         for pattern in (
-            ResearchPlanBuilderV02
+            ResearchPlanBuilderV03
             .FUZZY_PATTERNS
         ):
-
             if re.search(
                 pattern,
                 value,
@@ -333,3 +326,7 @@ class ResearchPlanBuilderV02:
                     f"字段 {path} 仍包含模糊表述："
                     f"{value}"
                 )
+
+
+# 兼容历史导入名称。
+ResearchPlanBuilderV02 = ResearchPlanBuilderV03
