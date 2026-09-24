@@ -76,6 +76,34 @@ class ExecutionCapabilityCheckerV03:
             )
 
         if (
+            plan.analysis.survey_design_required
+            is True
+        ):
+            reasons.append(
+                "当前执行引擎尚未实现复杂抽样设计执行。"
+            )
+
+        if (
+            plan.analysis.secondary_analyses
+        ):
+            reasons.append(
+                "当前执行引擎尚未实现次要分析："
+                + ", ".join(
+                    plan.analysis.secondary_analyses
+                )
+            )
+
+        if (
+            plan.analysis.sensitivity_analyses
+        ):
+            reasons.append(
+                "当前执行引擎尚未实现敏感性分析："
+                + ", ".join(
+                    plan.analysis.sensitivity_analyses
+                )
+            )
+
+        if (
             plan.missing_data.strategy
             != "complete_case_global"
         ):
