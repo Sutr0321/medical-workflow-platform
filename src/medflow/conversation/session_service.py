@@ -411,6 +411,30 @@ class PlanningSessionServiceV03:
                 if str(item).strip()
             ]
 
+        if field_path in {
+            "outcome.sensitivity_definitions",
+            "missing_data.assessment",
+            "analysis.secondary_analyses",
+            "analysis.sensitivity_analyses",
+        }:
+
+            if value is None:
+                return []
+
+            if not isinstance(
+                value,
+                list,
+            ):
+                raise ValueError(
+                    f"{field_path} 必须是列表。"
+                )
+
+            return [
+                str(item).strip()
+                for item in value
+                if str(item).strip()
+            ]
+
         return value
 
     @staticmethod
@@ -435,8 +459,18 @@ class PlanningSessionServiceV03:
             "outcome.name",
             "outcome.data_type",
             "outcome.definition",
+            "outcome.sensitivity_definitions",
             "missing_data.strategy",
+            "missing_data.mode",
+            "missing_data.assessment",
+            "missing_data.decision_rule",
+            "missing_data.sensitivity_plan",
             "analysis.method",
+            "analysis.effect_measure",
+            "analysis.ci_level",
+            "analysis.survey_design_required",
+            "analysis.secondary_analyses",
+            "analysis.sensitivity_analyses",
         )
 
         result: list[str] = []
