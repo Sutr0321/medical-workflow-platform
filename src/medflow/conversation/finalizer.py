@@ -12,10 +12,10 @@ from medflow.conversation.readiness_v03 import (
     ConversationalReadinessV03,
 )
 from medflow.planning.freeze_service_v02 import (
-    ResearchPlanFreezeServiceV02,
+    ResearchPlanFreezeServiceV03,
 )
 from medflow.planning.research_plan_builder import (
-    ResearchPlanBuilderV02,
+    ResearchPlanBuilderV03,
 )
 
 
