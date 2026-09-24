@@ -120,7 +120,7 @@ class ConversationalPlanningFinalizerV03:
         )
 
         research_plan = (
-            ResearchPlanBuilderV02
+            ResearchPlanBuilderV03
             .build(
                 reviewed_candidate=(
                     session.current_candidate
@@ -130,7 +130,7 @@ class ConversationalPlanningFinalizerV03:
         )
 
         frozen_plan = (
-            ResearchPlanFreezeServiceV02
+            ResearchPlanFreezeServiceV03
             .freeze(
                 research_plan=(
                     research_plan
