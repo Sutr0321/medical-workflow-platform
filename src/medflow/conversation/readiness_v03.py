@@ -27,6 +27,33 @@ class ConversationalReadinessV03:
     )
 
     @staticmethod
+    def required_paths(
+        spec: CandidateResearchSpecV01,
+    ) -> list[str]:
+        """
+        根据研究语义动态计算冻结前必须完成的字段。
+
+        NHANES 的调查周期属于研究范围本身，
+        不是单纯的数据绑定细节，因此冻结前必须明确。
+        """
+
+        paths = list(
+            ConversationalReadinessV03
+            .REQUIRED_PATHS
+        )
+
+        if (
+            ConversationalReadinessV03
+            ._requires_dataset_version(spec)
+        ):
+            paths.insert(
+                3,
+                "dataset.version",
+            )
+
+        return paths
+
+    @staticmethod
     def missing_fields(
         spec: CandidateResearchSpecV01,
     ) -> list[str]:
@@ -36,7 +63,7 @@ class ConversationalReadinessV03:
 
         for path in (
             ConversationalReadinessV03
-            .REQUIRED_PATHS
+            .required_paths(spec)
         ):
             value = (
                 ConversationalReadinessV03
@@ -62,17 +89,23 @@ class ConversationalReadinessV03:
     def blocking_reasons(
         spec: CandidateResearchSpecV01,
     ) -> list[str]:
-        """
-        除字段缺失外，再检查方案内部逻辑冲突。
-        """
 
-        reasons = [
-            f"必填研究决策尚未完成：{path}"
-            for path in (
-                ConversationalReadinessV03
-                .missing_fields(spec)
-            )
-        ]
+        reasons: list[str] = []
+
+        for path in (
+            ConversationalReadinessV03
+            .missing_fields(spec)
+        ):
+
+            if path == "dataset.version":
+                reasons.append(
+                    "NHANES 调查周期尚未确定；"
+                    "调查周期属于研究范围，冻结前需要明确。"
+                )
+            else:
+                reasons.append(
+                    f"必填研究决策尚未完成：{path}"
+                )
 
         method = (
             spec.analysis.method or ""
@@ -83,6 +116,7 @@ class ConversationalReadinessV03:
             or "multivariate" in method
             or "多变量" in method
             or "多因素" in method
+            or "survey_logistic_regression" in method
         ):
             if not spec.covariates:
                 reasons.append(
@@ -121,6 +155,7 @@ class ConversationalReadinessV03:
                 or "multivariate" in method
                 or "多变量" in method
                 or "多因素" in method
+                or "survey_logistic_regression" in method
             )
             and not spec.covariates
         )
@@ -132,8 +167,7 @@ class ConversationalReadinessV03:
             and "covariates"
             not in targets
         ):
-            targets.insert(
-                0,
+            targets.append(
                 "covariates",
             )
 
@@ -148,6 +182,17 @@ class ConversationalReadinessV03:
             ConversationalReadinessV03
             .blocking_reasons(spec)
         )
+
+    @staticmethod
+    def _requires_dataset_version(
+        spec: CandidateResearchSpecV01,
+    ) -> bool:
+
+        dataset_name = (
+            spec.dataset.name or ""
+        ).strip().upper()
+
+        return dataset_name == "NHANES"
 
     @staticmethod
     def _get_value(
