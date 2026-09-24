@@ -99,6 +99,63 @@ def ask_yes_no(
         )
 
 
+def read_initial_topic() -> str:
+    """
+    首轮支持真正的多行提示词。
+
+    之前直接用 input() 时，用户粘贴多行内容，
+    Python 只会把第一行作为 topic，
+    后续各行会被误当成后续对话消息。
+
+    现在统一使用 /send（或“发送”）结束首轮输入。
+    """
+
+    print(
+        "请先输入课题主题或完整研究方案。"
+    )
+    print(
+        "支持多行粘贴；全部输入完成后，"
+        "请单独输入一行 /send（或“发送”）提交。"
+    )
+    print()
+
+    lines: list[str] = []
+
+    while True:
+
+        line = input(
+            "你："
+            if not lines
+            else ""
+        )
+
+        if (
+            line.strip().lower()
+            in {
+                "/send",
+                "发送",
+            }
+        ):
+
+            break
+
+        lines.append(
+            line
+        )
+
+    topic = (
+        "\n".join(lines)
+        .strip()
+    )
+
+    if not topic:
+        raise RuntimeError(
+            "课题主题不能为空。"
+        )
+
+    return topic
+
+
 print()
 print("========================================")
 print(" 医学数据分析工作流平台")
@@ -109,18 +166,14 @@ print(
     "你只需要像聊天一样讨论课题。"
 )
 print(
-    "可随时输入：预览方案 / 冻结方案 / 退出"
+    "首轮支持多行研究方案；使用 /send 提交。"
+)
+print(
+    "会话中可随时输入：预览方案 / 冻结方案 / 退出"
 )
 print()
 
-topic = input(
-    "请先给我一个课题主题：\n你："
-).strip()
-
-if not topic:
-    raise RuntimeError(
-        "课题主题不能为空。"
-    )
+topic = read_initial_topic()
 
 
 service = (
