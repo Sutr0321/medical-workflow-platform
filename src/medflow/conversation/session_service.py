@@ -488,6 +488,7 @@ class PlanningSessionServiceV03:
             if current not in (
                 None,
                 "",
+                [],
             ):
                 result.append(path)
 
