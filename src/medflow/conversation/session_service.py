@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -250,6 +251,22 @@ class PlanningSessionServiceV03:
                 )
             )
 
+        (
+            candidate,
+            normalization_decisions,
+        ) = (
+            self._normalize_resolved_dependencies(
+                candidate=candidate,
+                answers=answers,
+                decided_at=now,
+            )
+        )
+
+        decisions.extend(
+            item.model_dump()
+            for item in normalization_decisions
+        )
+
         data[
             "current_candidate"
         ] = candidate.model_dump()
@@ -395,6 +412,85 @@ class PlanningSessionServiceV03:
             PlanningSessionV03
             .model_validate(data)
         )
+
+    @staticmethod
+    def _normalize_resolved_dependencies(
+        *,
+        candidate: CandidateResearchSpecV01,
+        answers: dict[str, Any],
+        decided_at: datetime,
+    ) -> tuple[
+        CandidateResearchSpecV01,
+        list[PlanningDecisionV03],
+    ]:
+        """
+        当某个上游研究决策已经明确后，
+        清理同一份 Candidate 中已经失效的“等待该决策”措辞。
+
+        这里只做不改变研究意图的确定性文本规范化，
+        并记录 SYSTEM_NORMALIZATION 审计事件。
+        """
+
+        if (
+            "dataset.version"
+            not in answers
+            or not answers[
+                "dataset.version"
+            ]
+        ):
+            return candidate, []
+
+        definition = (
+            candidate.outcome.definition
+            or ""
+        )
+
+        if not definition:
+            return candidate, []
+
+        normalized = re.sub(
+            (
+                r"[，,]?(?:等|待)确定\s*NHANES\s*调查周期后"
+                r"[，,]?在数据绑定阶段"
+                r"(?:按照|依据|根据)官方文档核对"
+            ),
+            (
+                "，后续在数据绑定阶段依据已确定的 "
+                "NHANES 调查周期和官方文档核对"
+            ),
+            definition,
+        )
+
+        if normalized == definition:
+            return candidate, []
+
+        updated = (
+            CandidateSpecUpdater
+            .apply_answers(
+                spec=candidate,
+                answers={
+                    "outcome.definition": normalized,
+                },
+            )
+        )
+
+        decision = PlanningDecisionV03(
+            field_path="outcome.definition",
+            value=normalized,
+            evidence=(
+                "dataset.version 已明确；"
+                "系统仅清理原定义中已失效的"
+                "“待确定 NHANES 调查周期后”措辞，"
+                "不改变结局定义本身。"
+            ),
+            source="SYSTEM_NORMALIZATION",
+            decided_at=decided_at,
+        )
+
+        return updated, [
+            decision
+        ]
+
 
     @staticmethod
     def _deterministic_turn_if_applicable(
