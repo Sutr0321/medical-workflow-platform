@@ -89,8 +89,16 @@ class ConversationalPlanningFinalizerV03:
                         item.value
                     ),
                     note=(
-                        "对话式规划中由用户明确表达。"
-                        f" 证据：{item.evidence}"
+                        (
+                            "对话式规划中由用户明确表达。"
+                            if item.source
+                            == "USER_EXPLICIT"
+                            else (
+                                "系统进行了不改变研究意图的"
+                                "确定性规范化。"
+                            )
+                        )
+                        + f" 证据：{item.evidence}"
                     ),
                     decided_at=(
                         item.decided_at
