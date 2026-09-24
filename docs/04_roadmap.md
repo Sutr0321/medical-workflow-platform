@@ -1,77 +1,228 @@
 # 04 开发路线图
 
-## Phase 1：Schema Contract V0.1
+## 总原则
 
-状态：✅
+第一阶段只做最小可运行闭环。
 
-## Phase 1.5：Research Planning / Review V0.2
+不一次性同时开发真实数据库、真实算法、工作流、前端和报告系统，而是逐层验证接口是否正确。
 
-状态：✅ 已形成底层分层设计
+---
 
-核心：
+## Step 1：定义 Schema
 
-- Proposal
-- Review Log
-- Research Plan
-- Freeze / Hash
+状态：✅ 已完成
 
-## Phase 1.6：Conversational Research Planning V0.3
+第一版 Contract：
 
-状态：⏳ 已开发，等待本地验收
+- Research Spec / Research Plan
+- Algorithm Input / Output
+- Algorithm Estimate
+- Result Schema
+- Pydantic 校验
 
-目标：
+在此基础上额外完成：
+
+### Conversational Research Planning V0.3
+
+状态：✅ 主链路人工验收通过
 
 ```text
-课题主题
-→ 多轮自然语言对话
-→ 实时 Research Plan
+研究主题 / 完整研究方案
+→ Conversational Planning
+→ Structured Research State
+→ Readiness
+→ Preview
 → 用户确认
 → Frozen Research Plan
 ```
 
-验收：
+这属于 Step 1 的增强，不改变后续主线顺序。
 
-- 用户不需要逐字段填表
-- AI 一次优先推进 1–2 个关键问题
-- 用户本轮决定先落状态，再生成下一轮回复
-- 已确认字段不再主动重复询问
-- AI 建议不自动写成确认值
-- Research Plan 与平台当前执行能力分离
-- 用户明确表达的决定可更新结构化状态
-- 随时可预览 Research Plan
-- 不完整方案不能冻结
-- 完整方案可确定性冻结
-- transcript / review log / research plan 可审计
+---
 
-## Phase 2：Data Binding
+## Step 2：只写一个简单 YAML
+
+状态：⬅️ NEXT
+
+第一版场景：
+
+```text
+横断面研究 + 二分类结局
+```
+
+流程：
+
+```text
+数据准备
+→ 基线表
+→ Logistic
+→ RCS
+```
+
+YAML 只描述：
+
+- step id
+- depends_on
+- algorithm id
+- algorithm version
+
+第一版验收只要求：
+
+- 能正确读取 YAML
+- 能通过 Pydantic 校验
+- 缺关键字段时拒绝
+
+这一阶段不执行统计。
+
+---
+
+## Step 3：YAML 转成 DAG
 
 状态：⬜
 
-目标：
+读取 YAML 后：
 
-把 Frozen Research Plan 的研究概念映射到真实数据。
+- 每个 step 变成一个节点
+- `depends_on` 变成边
+- 建立合法执行顺序
+- 检测循环依赖
+
+验收：
+
+- 能建立节点和边
+- 能拓扑排序
+- A → B → A 之类循环必须报错
+
+---
+
+## Step 4：算法先用 Mock
+
+状态：⬜
+
+先实现假的算法模块，不做真实统计。
+
+例如 Mock Logistic 可以返回固定结果：
+
+```text
+OR = 0.82
+P = 0.001
+```
+
+目标是验证平台能否：
+
+- 找到算法
+- 传入统一输入
+- 接收统一输出
+- 把结果交给后续模块
+
+---
+
+## Step 5：最简单 Workflow Engine
+
+状态：⬜
+
+第一版只做单机串行。
 
 负责：
 
-- dataset version
-- source file
-- source variable
-- actual source unit
-- coding
-- reference group
-- transformation
-- derived variable
-- derivation rule
+- 读取 DAG
+- 找当前可运行节点
+- 调用算法
+- 更新状态
+- 失败后阻断不应继续执行的下游节点
 
-产物：
+第一版状态可包括：
 
 ```text
-data_binding.json
+PENDING
+RUNNING
+SUCCESS
+FAILED
 ```
 
-## Phase 3：Executable Analysis Spec
+---
+
+## Step 6：Algorithm Registry
 
 状态：⬜
+
+第一版可以先使用 Python 字典：
+
+```text
+algorithm_id + version
+→ execution entry
+```
+
+后续再扩展运行环境、输入输出 Schema、验证状态等元数据。
+
+---
+
+## Step 7：Result Registry
+
+状态：⬜
+
+注意：
+
+```text
+Result Schema    ✅ 已完成
+Result Registry  ⬜ 尚未实现
+```
+
+第一版 Result Registry 可以先保存 JSON。
+
+核心要求：
+
+- 每次运行有 run_id
+- 能找到每个 step 的结果
+- 表格和图片以后只读取 Registry，不重新跑模型
+
+---
+
+## Step 8：替换一个真实算法
+
+状态：⬜
+
+当：
+
+```text
+方案
+→ YAML
+→ DAG
+→ Workflow
+→ Mock
+→ Result Registry
+```
+
+整条链稳定以后，再替换一个真实算法。
+
+优先候选：
+
+- Baseline Table
+- Logistic Regression
+
+成功标准：
+
+> 替换真实算法时，Workflow 核心代码不需要修改，只需要调整 Registry 中的算法入口。
+
+---
+
+# 后续工程扩展
+
+以下模块仍然重要，但不打乱当前 8 步最小闭环主线。
+
+## Data Binding
+
+真实数据执行前需要把 Research Plan 中的研究概念映射到：
+
+- source file
+- source variable
+- actual unit
+- coding
+- reference group
+- weight / PSU / strata
+- derivation rule
+
+## Executable Analysis Spec
 
 输入：
 
@@ -81,81 +232,28 @@ Frozen Research Plan
 Validated Data Binding
 ```
 
-输出：
+输出机器可执行分析任务。
+
+## Golden Test
+
+真实算法接入后，需要证明：
+
+> 平台结果与人工标准代码在预设容差内一致。
+
+## Web UI
+
+后端主链稳定后再开发：
 
 ```text
-Executable Analysis Spec
+左侧 AI 对话
+右侧 Research Plan Preview
+底部人工确认 / Freeze
 ```
 
-它才是 Rule / Workflow 的正式输入。
+---
 
-## Phase 4：Rule + YAML
+## 当前唯一下一任务
 
-状态：⬜
+> **Step 2：Simple YAML。**
 
-第一条最小闭环：
-
-```text
-cross_sectional
-+
-binary outcome
-+
-logistic_regression
-```
-
-## Phase 5：DAG + Workflow Engine
-
-状态：⬜
-
-## Phase 6：Algorithm Registry
-
-状态：⬜
-
-第一版注册：
-
-```text
-logistic_regression
-```
-
-## Phase 7：真实 Logistic Regression
-
-状态：⬜
-
-## Phase 8：Result Registry
-
-状态：⬜
-
-## Phase 9：Golden Test
-
-状态：⬜
-
-自动结果必须与人工标准代码在预设容差内一致。
-
-## Phase 10：算法扩展
-
-闭环稳定后再增加：
-
-- Linear Regression
-- Cox Regression
-- RCS
-- Survey-weighted Regression
-- Kaplan-Meier
-- Mediation
-- Clustering
-
-## Phase 11：Web UI
-
-后端会话与冻结机制稳定后，前端目标界面：
-
-```text
-┌────────────────────┬────────────────────┐
-│ AI 对话             │ Research Plan       │
-│                    │ 实时预览             │
-│ 用户 / AI 多轮讨论  │ 已确认 / 待讨论      │
-│                    │                     │
-└────────────────────┴────────────────────┘
-          [确认并冻结研究方案]
-```
-
-前端只是消费已有 Planning Session / Preview / Freeze API，
-不重新实现业务逻辑。
+在 Step 2 验收完成前，不提前进入 DAG、Workflow、Registry 或真实统计。
