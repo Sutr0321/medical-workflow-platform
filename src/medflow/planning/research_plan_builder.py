@@ -316,3 +316,7 @@ class ResearchPlanBuilderV03:
                     f"字段 {path} 仍包含模糊表述："
                     f"{value}"
                 )
+
+
+# 兼容历史导入名称。
+ResearchPlanBuilderV02 = ResearchPlanBuilderV03
