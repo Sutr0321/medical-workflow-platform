@@ -210,6 +210,16 @@ while True:
         .route(user_message)
     )
 
+    if command == "SEND":
+
+        print()
+        print(
+            "当前会话中的单行回复按回车即可提交；"
+            "/send 仅用于首轮多行输入，不会发送给 AI。"
+        )
+
+        continue
+
     if command == "QUIT":
 
         print()
