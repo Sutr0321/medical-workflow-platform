@@ -5,7 +5,7 @@ from medflow.contracts.planning_session import (
     PlanningSessionV03,
 )
 from medflow.contracts.research_plan import (
-    FrozenResearchPlanV02,
+    FrozenResearchPlanV03,
 )
 from medflow.contracts.review_log import (
     ReviewDecisionLogV02,
@@ -32,7 +32,7 @@ class ConversationPlanningStoreV03:
         *,
         session: PlanningSessionV03,
         review_log: ReviewDecisionLogV02,
-        frozen_plan: FrozenResearchPlanV02,
+        frozen_plan: FrozenResearchPlanV03,
     ) -> Path:
 
         output_dir = (
