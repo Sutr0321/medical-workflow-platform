@@ -4,31 +4,25 @@ import uuid
 from datetime import datetime, timezone
 
 from medflow.contracts.research_plan import (
-    FrozenResearchPlanV02,
-    ResearchPlanV02,
+    FrozenResearchPlanV03,
+    ResearchPlanV03,
 )
 from medflow.contracts.review_log import (
     ReviewDecisionLogV02,
 )
 
 
-class ResearchPlanFreezeServiceV02:
+class ResearchPlanFreezeServiceV03:
     """
-    V0.2 Research Plan 冻结服务。
-
-    这里冻结的是“研究计划”，
-    不是可直接执行的统计任务。
-
-    后续仍需经过 Data Binding，
-    才能进入 Rule / YAML / Workflow。
+    V0.3 Rich Research Plan 冻结服务。
     """
 
     @staticmethod
     def freeze(
         *,
-        research_plan: ResearchPlanV02,
+        research_plan: ResearchPlanV03,
         review_log: ReviewDecisionLogV02,
-    ) -> FrozenResearchPlanV02:
+    ) -> FrozenResearchPlanV03:
 
         if (
             review_log.status
@@ -39,15 +33,15 @@ class ResearchPlanFreezeServiceV02:
             )
 
         content_hash = (
-            ResearchPlanFreezeServiceV02
+            ResearchPlanFreezeServiceV03
             ._calculate_hash(
                 research_plan
             )
         )
 
-        return FrozenResearchPlanV02(
+        return FrozenResearchPlanV03(
             plan_id=(
-                "RP2-"
+                "RP3-"
                 + uuid.uuid4().hex[
                     :12
                 ].upper()
@@ -71,7 +65,7 @@ class ResearchPlanFreezeServiceV02:
 
     @staticmethod
     def _calculate_hash(
-        research_plan: ResearchPlanV02,
+        research_plan: ResearchPlanV03,
     ) -> str:
 
         canonical_json = json.dumps(
