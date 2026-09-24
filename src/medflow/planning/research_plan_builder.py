@@ -89,6 +89,16 @@ class ResearchPlanBuilderV03:
                 field_path,
             )
 
+        if (
+            reviewed_candidate.dataset.name
+            and reviewed_candidate.dataset.name.strip().upper()
+            == "NHANES"
+        ):
+            ResearchPlanBuilderV03._require(
+                reviewed_candidate.dataset.version,
+                "dataset.version",
+            )
+
         plan = ResearchPlanV03(
             source_question=(
                 reviewed_candidate
