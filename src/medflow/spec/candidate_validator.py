@@ -55,6 +55,23 @@ class CandidateSpecValidator:
                 "请说明计划使用的数据来源或数据集；如暂未确定可稍后补充。",
             )
 
+        elif (
+            spec.dataset.name.strip().upper()
+            == "NHANES"
+            and (
+                spec.dataset.version is None
+                or not spec.dataset.version.strip()
+            )
+        ):
+            add_issue(
+                "dataset.version",
+                True,
+                "请明确计划使用的 NHANES 调查周期。"
+                "调查周期属于研究范围，冻结前需要确定；"
+                "具体文件、变量名、权重、PSU 和 strata "
+                "仍留到 Data Binding 阶段核对。",
+            )
+
         if spec.population.age_min is None:
             add_issue(
                 "population.age_min",
