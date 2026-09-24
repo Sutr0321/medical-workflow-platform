@@ -6,6 +6,7 @@ PlanningCommand = Literal[
     "FREEZE",
     "PREVIEW",
     "QUIT",
+    "SEND",
     "NONE",
 ]
 
@@ -44,6 +45,11 @@ class PlanningCommandRouterV03:
         r"^/exit$",
     )
 
+    SEND_PATTERNS = (
+        r"^/send$",
+        r"^发送$",
+    )
+
     @staticmethod
     def route(
         message: str,
@@ -75,6 +81,13 @@ class PlanningCommandRouterV03:
             .QUIT_PATTERNS,
         ):
             return "QUIT"
+
+        if PlanningCommandRouterV03._matches(
+            normalized,
+            PlanningCommandRouterV03
+            .SEND_PATTERNS,
+        ):
+            return "SEND"
 
         return "NONE"
 
